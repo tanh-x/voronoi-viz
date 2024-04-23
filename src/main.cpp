@@ -4,7 +4,7 @@
 
 
 int main(int argc, char* argv[]) {
-    testSplayTree();
+    runAllTests();
 
     return 0;
 }
