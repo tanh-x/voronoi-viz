@@ -1,6 +1,7 @@
 #ifndef VORONOI_VIZ_VERTEX_HPP
 #define VORONOI_VIZ_VERTEX_HPP
 
+#include <string>
 #include "utils/math/Vec2.hpp"
 #include "HalfEdge.hpp"
 
@@ -20,6 +21,8 @@ public:
         id(id),
         pos(v),
         incidentEdge(nullptr) {};
+
+    std::string toString();
 };
 
 #endif //VORONOI_VIZ_VERTEX_HPP

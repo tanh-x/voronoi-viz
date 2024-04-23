@@ -7,3 +7,7 @@ double Vertex::x() const {
 double Vertex::y() const {
     return this->pos.y;
 }
+
+std::string Vertex::toString() {
+    return "v" + std::to_string(id);
+}
