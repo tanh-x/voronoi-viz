@@ -6,6 +6,7 @@
 #include <functional>
 
 void linkedSplayTreeTest1();
+
 void linkedSplayTreeTest2_3();
 
 template<typename K, typename V = std::less<K>>
@@ -13,6 +14,7 @@ class LinkedNode {
 public:
     K key;
     V value;
+
     LinkedNode<K, V>* left {nullptr};
     LinkedNode<K, V>* right {nullptr};
     LinkedNode<K, V>* parent {nullptr};
@@ -25,10 +27,60 @@ public:
 
     void setRightChild(LinkedNode<K, V>* child);
 
+    void linkNext(LinkedNode<K, V>* nextNode);
+
+    void linkPrev(LinkedNode<K, V>* prevNode);
+
+    void wedgeBefore(LinkedNode<K, V>* node);
+
+    void wedgeAfter(LinkedNode<K, V>* node);
+
+    void dissolveLinks();
+
     LinkedNode<K, V>* rightmost();
 
     LinkedNode<K, V>* leftmost();
 };
+
+template<typename K, typename V>
+void LinkedNode<K, V>::linkNext(LinkedNode<K, V>* nextNode) {
+    this->next = nextNode;
+    if (nextNode != nullptr) nextNode->prev = this;
+}
+
+
+template<typename K, typename V>
+void LinkedNode<K, V>::linkPrev(LinkedNode<K, V>* prevNode) {
+    this->prev = prevNode;
+    if (prevNode != nullptr) prevNode->next = this;
+}
+
+
+template<typename K, typename V>
+void LinkedNode<K, V>::wedgeBefore(LinkedNode<K, V>* node) {
+    if (node == nullptr) throw std::invalid_argument("Node cannot be null");
+    auto* prevNode = node->prev;
+
+    this->linkPrev(prevNode);
+    this->linkNext(node);
+}
+
+
+template<typename K, typename V>
+void LinkedNode<K, V>::wedgeAfter(LinkedNode<K, V>* node) {
+    if (node == nullptr) throw std::invalid_argument("Node cannot be null");
+    auto* nextNode = node->next;
+
+    this->linkPrev(node);
+    this->linkNext(nextNode);
+}
+
+template<typename K, typename V>
+void LinkedNode<K, V>::dissolveLinks() {
+    if (this->prev) this->prev->next = this->next;
+    if (this->next) this->next->prev = this->prev;
+}
+
 
 template<typename K, typename V>
 void LinkedNode<K, V>::setLeftChild(LinkedNode<K, V>* child) {
@@ -198,17 +250,11 @@ void LinkedSplayTree<K, V, Comparator>::add(K key, V value) {
     if (!y) {
         root = newNode;
     } else if (compare(newNode->key, y->key)) {
-        y->left = newNode;
-        newNode->next = y;
-        newNode->prev = y->prev;
-        if (y->prev) y->prev->next = newNode;
-        y->prev = newNode;
+        y->left = newNode;  // Tree handling
+        newNode->wedgeBefore(y);  // Linked list handling
     } else {
-        y->right = newNode;
-        newNode->prev = y;
-        newNode->next = y->next;
-        if (y->next) y->next->prev = newNode;
-        y->next = newNode;
+        y->right = newNode;  // Tree handling
+        newNode->wedgeAfter(y);  // Linked list handling
     }
 
     splay(newNode);
@@ -263,8 +309,7 @@ template<typename K, typename V, typename Comparator>
 void LinkedSplayTree<K, V, Comparator>::removeNode(LinkedNode<K, V>* node) {
     if (node == nullptr) return;
 
-    if (node->prev) node->prev->next = node->next;
-    if (node->next) node->next->prev = node->prev;
+    node->dissolveLinks();
 
     LinkedNode<K, V>* newRoot;
     if (!node->left) newRoot = node->right;

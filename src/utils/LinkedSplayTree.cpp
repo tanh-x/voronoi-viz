@@ -150,4 +150,5 @@ void linkedSplayTreeTest2_3() {
 
     assert(previous->key);
 
+    std::cout << "Finished (Linked)SplayTree tests" << std::endl;
 }
