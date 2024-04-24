@@ -1,6 +1,7 @@
 #include <iostream>
 #include "tests.hpp"
 #include "utils/PriorityQueue.hpp"
+#include "utils/LinkedSplayTree.hpp"
 
 
 void runAllTests() {
@@ -12,6 +13,9 @@ void runAllTests() {
     splayTreeTest2();
     // Splay tree slides, insertion and deletion example
     splayTreeTest3_4();
+
+    linkedSplayTreeTest1();
+    linkedSplayTreeTest2_3();
 
     priorityQueueTest1();
     priorityQueueTest2();
