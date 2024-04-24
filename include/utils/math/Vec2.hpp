@@ -3,7 +3,7 @@
 
 #define VEC2_NO_IDENTIFIER (-12345)
 
-#define VEC2_INFTY_PLACEHOLDER (1.054571817e8f)
+#define VEC2_INFTY_PLACEHOLDER (1.234567e8f)
 
 class Vec2 {
 public:

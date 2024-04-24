@@ -33,7 +33,7 @@ std::vector<Vec2> parseSites(const std::string &filepath) {
 
 
 int main(int argc, char* argv[]) {
-    runAllTests();
+//    runAllTests();
 
     [[maybe_unused]] bool animate = false;
     [[maybe_unused]] bool delaunay = false;
@@ -67,7 +67,11 @@ int main(int argc, char* argv[]) {
 
     // Start the algorithm
     DCEL* result = computeVoronoi(sites);
-    printf("V: %d, HE: %d, F: %d", result->numVertices(), result->numHalfEdges(), result->numFaces());
+    printf("V: %d, HE: %d, F: %d\n", result->numVertices(), result->numHalfEdges(), result->numFaces());
+
+    for (auto v: result->vertices) {
+        std::cout << v->pos.toString() << std::endl;
+    }
 
     return 0;
 }

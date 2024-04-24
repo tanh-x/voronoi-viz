@@ -169,15 +169,15 @@ void SplayTree<K, V, Comparator>::splay(Node<K, V>* node, Node<K, V>* rootParent
             // Left-sided zig-zig
             rotateRight(node->parent->parent, rootParent);
             rotateRight(node->parent, rootParent);
-        } else if (parentLeft /* && grandparent rightArc */) {
+        } else if (parentLeft /* && grandparent rightSite */) {
             // ">" Zig-zag
             rotateRight(node->parent, rootParent);
             rotateLeft(node->parent, rootParent);
-        } else if (/* parent rightArc && */ !grandparentLeft) {
+        } else if (/* parent rightSite && */ !grandparentLeft) {
             // Right-sided zig-zig
             rotateLeft(node->parent->parent, rootParent);
             rotateLeft(node->parent, rootParent);
-        } else /* if (parent rightArc && grandparent rightArc) */ {
+        } else /* if (parent rightSite && grandparent rightSite) */ {
             // "<" Zig-zag
             rotateLeft(node->parent, rootParent);
             rotateRight(node->parent, rootParent);

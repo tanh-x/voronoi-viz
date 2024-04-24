@@ -17,7 +17,7 @@ public:
     HalfEdge* prev {nullptr};
     Face* incidentFace {nullptr};
 
-    HalfEdge() {}
+    HalfEdge() : origin {nullptr}, dest {nullptr} {}
 
     HalfEdge(Vertex* origin, Vertex* dest) : origin(origin), dest(dest) {}
 };

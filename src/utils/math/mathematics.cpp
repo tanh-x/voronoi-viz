@@ -34,7 +34,7 @@ double pointDirectrixIntersectionX(const Vec2 &leftParabolaFocus, const Vec2 &ri
     double d = directrix;
 
     double discriminant = (d - b) * (d - v) * (sq(a - u) + sq(b - v));
-    return (a * d - a * v + b * u - d * u + sqrt(discriminant)) / (b - v);
+    return (a * d - a * v + b * u - d * u - sqrt(discriminant)) / (b - v);
 }
 
 

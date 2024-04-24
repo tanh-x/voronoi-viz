@@ -108,6 +108,7 @@ LinkedNode<K, V>* LinkedNode<K, V>::leftmost() {
     return node;
 }
 
+
 template<typename K, typename V, typename Comparator = std::less<K>>
 class LinkedSplayTree {
 public:
@@ -118,7 +119,7 @@ public:
 
     explicit LinkedSplayTree(Comparator comparator) : root(nullptr), compare(comparator) {}
 
-    void add(K key, V value);
+    LinkedNode<K, V>* add(K key, V value, bool doSplay = true);
 
     LinkedNode<K, V>* get(K key);
 
@@ -126,7 +127,7 @@ public:
 
     void remove(K key);
 
-    void removeNode(LinkedNode<K, V>* node);
+    void removeNode(LinkedNode<K, V>* node, bool doSplay = true);
 
     void splay(LinkedNode<K, V>* node, LinkedNode<K, V>* rootParent = nullptr);
 
@@ -219,15 +220,15 @@ void LinkedSplayTree<K, V, Comparator>::splay(LinkedNode<K, V>* node, LinkedNode
             // Left-sided zig-zig
             rotateRight(node->parent->parent, rootParent);
             rotateRight(node->parent, rootParent);
-        } else if (parentLeft /* && grandparent rightArc */) {
+        } else if (parentLeft /* && grandparent rightSite */) {
             // ">" Zig-zag
             rotateRight(node->parent, rootParent);
             rotateLeft(node->parent, rootParent);
-        } else if (/* parent rightArc && */ !grandparentLeft) {
+        } else if (/* parent rightSite && */ !grandparentLeft) {
             // Right-sided zig-zig
             rotateLeft(node->parent->parent, rootParent);
             rotateLeft(node->parent, rootParent);
-        } else /* if (parent rightArc && grandparent rightArc) */ {
+        } else /* if (parent rightSite && grandparent rightSite) */ {
             // "<" Zig-zag
             rotateLeft(node->parent, rootParent);
             rotateRight(node->parent, rootParent);
@@ -236,14 +237,18 @@ void LinkedSplayTree<K, V, Comparator>::splay(LinkedNode<K, V>* node, LinkedNode
 }
 
 template<typename K, typename V, typename Comparator>
-void LinkedSplayTree<K, V, Comparator>::add(K key, V value) {
+LinkedNode<K, V>* LinkedSplayTree<K, V, Comparator>::add(K key, V value, bool doSplay) {
     auto* newNode = new LinkedNode<K, V>(key, value);
     LinkedNode<K, V>* y = nullptr;
     LinkedNode<K, V>* x = this->root;
 
     while (x) {
         y = x;
-        x = compare(key, x->key) ? x->left : x->right;
+        if (compare(key, x->key)) {
+            x = x->left;
+        } else {
+            x = x->right;
+        }
     }
 
     newNode->parent = y;
@@ -257,7 +262,8 @@ void LinkedSplayTree<K, V, Comparator>::add(K key, V value) {
         newNode->wedgeAfter(y);  // Linked list handling
     }
 
-    splay(newNode);
+    if (doSplay) splay(newNode);
+    return newNode;
 }
 
 
@@ -306,7 +312,7 @@ void LinkedSplayTree<K, V, Comparator>::remove(K key) {
 
 
 template<typename K, typename V, typename Comparator>
-void LinkedSplayTree<K, V, Comparator>::removeNode(LinkedNode<K, V>* node) {
+void LinkedSplayTree<K, V, Comparator>::removeNode(LinkedNode<K, V>* node, bool doSplay) {
     if (node == nullptr) return;
 
     node->dissolveLinks();
@@ -317,11 +323,10 @@ void LinkedSplayTree<K, V, Comparator>::removeNode(LinkedNode<K, V>* node) {
     else newRoot = join(node->left, node->right);
 
     replace(node, newRoot);
-    splay(node->parent);
+    if (doSplay) splay(node->parent);
 
     node->left = nullptr;
     node->right = nullptr;
-    delete node;
 }
 
 
