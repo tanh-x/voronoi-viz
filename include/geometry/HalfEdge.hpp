@@ -11,12 +11,22 @@ class Vertex;
 class HalfEdge {
 public:
     Vertex* origin;
-    HalfEdge* twin;
-    HalfEdge* next;
-    HalfEdge* prev;
-    Face* incidentFace;
+    Vertex* dest;
+    HalfEdge* twin {nullptr};
+    HalfEdge* next {nullptr};
+    HalfEdge* prev {nullptr};
+    Face* incidentFace {nullptr};
 
-    HalfEdge() : origin(nullptr), twin(nullptr), next(nullptr), prev(nullptr), incidentFace(nullptr) {}
+    HalfEdge() {}
+
+    HalfEdge(Vertex* origin, Vertex* dest) : origin(origin), dest(dest) {}
+};
+
+struct VertexPair {
+    Vertex* v1 = nullptr;
+    Vertex* v2 = nullptr;
+
+    void offerVertex(Vertex* vertex);
 };
 
 #endif //VORONOI_VIZ_HALFEDGE_HPP

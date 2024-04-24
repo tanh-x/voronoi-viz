@@ -68,7 +68,7 @@ void splayTreeTest1() {
            "|\t91->_J\n"
     );
 
-    Node<int, const char*>* n = tree.find(36);
+    Node<int, const char*>* n = tree.get(36);
     assert(n->key == 36);
     assert(std::string(n->value) == "a");
 
@@ -140,7 +140,7 @@ void splayTreeTest2() {
            "|\t--\n"
     );
 
-    Node<int, const char*>* n = tree.find(10);
+    Node<int, const char*>* n = tree.get(10);
     assert(n->key == 10);
     assert(std::string(n->value) == "a");
 
@@ -256,7 +256,7 @@ void splayTreeTest3_4() {
            "|\t|\tv10->x=100\n"
     );
 
-    assert(tree.find(v80)->key->x() == 80);
+    assert(tree.get(v80)->key->x() == 80);
 
     std::cout << "Testing SplayTree, case 4" << std::endl;
 

@@ -26,6 +26,8 @@ public:
     void setRightChild(Node<K, V>* child);
 
     Node<K, V>* rightmost();
+
+    Node<K, V>* leftmost();
 };
 
 template<typename K, typename V>
@@ -34,6 +36,14 @@ Node<K, V>* Node<K, V>::rightmost() {
     while (node->right) node = node->right;
     return node;
 }
+
+template<typename K, typename V>
+Node<K, V>* Node<K, V>::leftmost() {
+    Node<K, V>* node = this;
+    while (node->left) node = node->left;
+    return node;
+}
+
 
 template<typename K, typename V, typename Comparator = std::less<K>>
 class SplayTree {
@@ -47,11 +57,18 @@ public:
 
     void add(K key, V value);
 
-    Node<K, V>* find(K key, bool doSplay = true);
+    Node<K, V>* get(K key);
+
+    // Like get(), but without side effects (no splaying)
+    Node<K, V>* search(K key) const;
 
     void remove(K key);
 
-    std::string toString();
+    void removeNode(Node<K, V>* node);
+
+    [[nodiscard]] std::string toString() const;
+
+    void replace(Node<K, V>* x, Node<K, V>* y);
 
 private:
     void rotateLeft(Node<K, V>* node, Node<K, V>* rootParent = nullptr);
@@ -60,13 +77,10 @@ private:
 
     void splay(Node<K, V>* node, Node<K, V>* rootParent = nullptr);
 
-    void replace(Node<K, V>* x, Node<K, V>* y);
-
     static void toStringRecursive(Node<K, V>* node, int depth, std::stringstream &oss);
 
     Node<K, V>* join(Node<K, V>* left, Node<K, V>* right);
 };
-
 
 template<typename K, typename V>
 void Node<K, V>::setLeftChild(Node<K, V>* child) {
@@ -81,7 +95,7 @@ void Node<K, V>::setRightChild(Node<K, V>* child) {
 }
 
 template<typename K, typename V, typename Comparator>
-std::string SplayTree<K, V, Comparator>::toString() {
+std::string SplayTree<K, V, Comparator>::toString() const {
     std::stringstream oss;
     toStringRecursive(root, 0, oss);
     return oss.str();
@@ -137,6 +151,7 @@ void SplayTree<K, V, Comparator>::rotateRight(Node<K, V>* node, Node<K, V>* root
 
 template<typename K, typename V, typename Comparator>
 void SplayTree<K, V, Comparator>::splay(Node<K, V>* node, Node<K, V>* rootParent) {
+    if (node == nullptr) return;
     while (node->parent != rootParent) {
         bool parentLeft = node->parent->left == node;
 
@@ -154,15 +169,15 @@ void SplayTree<K, V, Comparator>::splay(Node<K, V>* node, Node<K, V>* rootParent
             // Left-sided zig-zig
             rotateRight(node->parent->parent, rootParent);
             rotateRight(node->parent, rootParent);
-        } else if (parentLeft /* && grandparent right */) {
+        } else if (parentLeft /* && grandparent rightArc */) {
             // ">" Zig-zag
             rotateRight(node->parent, rootParent);
             rotateLeft(node->parent, rootParent);
-        } else if (/* parent right && */ !grandparentLeft) {
+        } else if (/* parent rightArc && */ !grandparentLeft) {
             // Right-sided zig-zig
             rotateLeft(node->parent->parent, rootParent);
             rotateLeft(node->parent, rootParent);
-        } else /* if (parent right && grandparent right) */ {
+        } else /* if (parent rightArc && grandparent rightArc) */ {
             // "<" Zig-zag
             rotateLeft(node->parent, rootParent);
             rotateRight(node->parent, rootParent);
@@ -181,26 +196,29 @@ void SplayTree<K, V, Comparator>::add(K key, V value) {
         node = comp(node->key, key) ? node->right : node->left;
     }
 
-    node = new Node<K, V>(key, value);
-    node->parent = parent;
+    auto newNode = new Node<K, V>(key, value);
 
-    if (!parent) root = node;
-    else if (comp(parent->key, key)) parent->right = node;
-    else parent->left = node;
+    if (!parent) root = newNode;
+    else if (comp(key, parent->key)) parent->setLeftChild(newNode);
+    else parent->setRightChild(newNode);
 
-    splay(node);
+    splay(newNode);
 }
 
 
 template<typename K, typename V, typename Comparator>
-Node<K, V>* SplayTree<K, V, Comparator>::find(K key, bool doSplay) {
+Node<K, V>* SplayTree<K, V, Comparator>::get(K key) {
+    Node<K, V>* node = this->search(key);
+    if (node) splay(node);
+    return node;
+}
+
+
+template<typename K, typename V, typename Comparator>
+Node<K, V>* SplayTree<K, V, Comparator>::search(K key) const {
     Node<K, V>* node = root;
     while (node) {
-        if (node->key == key) {
-            if (doSplay) splay(node);
-            return node;
-        }
-
+        if (node->key == key) return node;
         node = comp(node->key, key) ? node->right : node->left;
     }
     return nullptr;
@@ -227,25 +245,38 @@ Node<K, V>* SplayTree<K, V, Comparator>::join(Node<K, V>* left, Node<K, V>* righ
 
 template<typename K, typename V, typename Comparator>
 void SplayTree<K, V, Comparator>::remove(K key) {
-    Node<K, V>* x = find(key, false);
+    Node<K, V>* x = search(key);
     if (!x) return;
 
-    if (!x->left) replace(x, x->right);
-    else if (!x->right) replace(x, x->left);
-    else {
-        // Join
-        Node<K, V>* leftSubtree = x->left;
-        Node<K, V>* rightSubtree = x->right;
-        Node<K, V>* newRoot = join(leftSubtree, rightSubtree);
-        replace(x, newRoot);
+    Node<K, V>* newRoot;
+    if (!x->left) newRoot = x->right;
+    else if (!x->right) newRoot = x->left;
+    else newRoot = join(x->left, x->right);
 
-        // Splay parent
-    }
+    replace(x, newRoot);
     splay(x->parent);
 
     x->left = nullptr;
     x->right = nullptr;
     delete x;
+}
+
+
+template<typename K, typename V, typename Comparator>
+void SplayTree<K, V, Comparator>::removeNode(Node<K, V>* node) {
+    if (node == nullptr) return;
+
+    Node<K, V>* newRoot;
+    if (!node->left) newRoot = node->right;
+    else if (!node->right) newRoot = node->left;
+    else newRoot = join(node->left, node->right);
+
+    replace(node, newRoot);
+    splay(node->parent);
+
+    node->left = nullptr;
+    node->right = nullptr;
+    delete node;
 }
 
 #endif

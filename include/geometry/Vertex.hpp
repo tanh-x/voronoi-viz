@@ -22,7 +22,7 @@ public:
         pos(v),
         incidentEdge(nullptr) {};
 
-    std::string toString();
+    [[nodiscard]] std::string toString() const;
 };
 
 #endif //VORONOI_VIZ_VERTEX_HPP
