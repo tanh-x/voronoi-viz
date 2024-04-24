@@ -44,6 +44,14 @@ DCEL* computeVoronoi(const std::vector<Vec2> &sites) {
         if (event->isSiteEvent) {
             processSiteEvent(event, beachLine, eventQueue, dcel, &sweepY);
         } else {
+            // TODO: Make this not linear time
+            for (auto &v: sites) {
+                double radius = event->circleCenter.y - event->pos.y;
+                double dist = event->circleCenter.distanceTo(v);
+                if (dist - radius < -1e-6) event->isInvalidated = true;
+            }
+
+            if (event->isInvalidated) continue;
             processCircleEvent(event, beachLine, eventQueue, dcel, &sweepY);
         }
 //        delete event;
@@ -160,7 +168,7 @@ void checkCircleEvent(
     Vec2 b = *arc->focus;
     Vec2 c = *arcNode->next->key->rightSite;
 
-    assert(a.identifier != b.identifier && b.identifier != c.identifier && a.identifier != c.identifier);
+    if (!(a.identifier != b.identifier && b.identifier != c.identifier && a.identifier != c.identifier)) return;
 
     // Check if b is a vertex of a converging circle with a and c
 //    assert(computeDeterminantTest(a, b, c) >= 0); // Points must be oriented clockwise

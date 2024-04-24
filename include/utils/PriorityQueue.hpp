@@ -27,7 +27,6 @@ void priorityQueueTest8();
 template<typename E, typename Comparator = std::less<E>>
 class PriorityQueue {
 private:
-    std::vector<E> heap;
     Comparator compare;
 
     void heapifyUp(int index);
@@ -52,6 +51,8 @@ public:
     E poll();
 
     [[nodiscard]] bool empty() const;
+
+    std::vector<E> heap;
 };
 
 
