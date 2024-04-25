@@ -13,9 +13,13 @@ class DCEL {
 public:
     friend class DCELFactory;
 
+
     std::vector<Vertex*> vertices;
     std::vector<HalfEdge*> halfEdges;
     std::vector<Face*> faces;
+
+    Vec2 boundingBottomLeft {Vec2(-DOUBLE_INFINITY, -DOUBLE_INFINITY)};
+    Vec2 boundingTopRight {Vec2(DOUBLE_INFINITY, DOUBLE_INFINITY)};
 
     [[nodiscard]] int numVertices() const;
 
@@ -42,7 +46,7 @@ public:
     std::unordered_set<Vertex*> vertices {};
     std::unordered_set<VertexPair*> vertexPairs {};
 
-    DCEL* createDCEL();
+    DCEL* createDCEL(const std::vector<Vec2> &sites);
 
     DCELFactory() = default;
 };

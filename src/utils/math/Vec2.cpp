@@ -53,7 +53,13 @@ double Vec2::distanceTo(const Vec2 &other) const {
 }
 
 Vec2 Vec2::infinity() {
-    Vec2 result = Vec2(VEC2_INFTY_PLACEHOLDER, VEC2_INFTY_PLACEHOLDER);
+    Vec2 result = Vec2(VEC2_PLACEHOLDER, VEC2_PLACEHOLDER);
     result.isInfinite = true;
     return result;
+}
+
+Vec2::Vec2(double x, double y) : x(x), y(y) {
+    if (x == VEC2_PLACEHOLDER || x == DOUBLE_INFINITY || y == VEC2_PLACEHOLDER || y == DOUBLE_INFINITY) {
+        isInfinite = true;
+    }
 }

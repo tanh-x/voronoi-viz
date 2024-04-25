@@ -69,9 +69,48 @@ int main(int argc, char* argv[]) {
     DCEL* result = computeVoronoi(sites);
     printf("V: %d, HE: %d, F: %d\n", result->numVertices(), result->numHalfEdges(), result->numFaces());
 
+    std::cout << "Vertices:\n" << std::endl;
     for (auto v: result->vertices) {
-        std::cout << v->pos.toString() << std::endl;
+        std::cout << v->toString() << v->pos.toString() << std::endl;
     }
+
+    std::cout << "Edges:\n" << std::endl;
+
+    for (auto e: result->halfEdges) {
+        Vertex* origin = e->origin;
+        Vertex* dest = e->dest;
+        std::cout << (origin == nullptr ? "infty" : origin->toString() + origin->pos.toString()) << "->"
+                  << (dest == nullptr ? "infty" : dest->toString() + dest->pos.toString()) << std::endl;
+    }
+
+
+
+
+    // TODO: DEBUGGING ONLY -------------
+    std::cout << "DEBUGGING: Generated python mpl syntax:\n```" << std::endl;
+    std::cout << "sites = np.array([" << std::endl;
+    for (auto s: sites) {
+        std::cout << "\t(" << std::to_string(s.x) << ", " << std::to_string(s.y) << ")," << std::endl;
+    }
+    std::cout << "])\n\n# Vertex list\nverts = np.array([" << std::endl;
+    for (auto v: result->vertices) {
+        std::cout << '\t' << v->pos.toString() << "," << std::endl;
+    }
+    std::cout << "])\n\n# Edge list\nv1 = np.array([" << std::endl;
+    for (auto e: result->halfEdges) {
+        std::cout << '\t';
+        Vertex* origin = e->origin;
+        if (origin == nullptr || e->dest == nullptr) std::cout << "# ";
+        std::cout << (origin == nullptr ? "(0, 0)" : origin->pos.toString()) << "," << std::endl;
+    }
+    std::cout << "])\n\nv2 = np.array([" << std::endl;
+    for (auto e: result->halfEdges) {
+        std::cout << '\t';
+        Vertex* dest = e->dest;
+        if (dest == nullptr || e->origin == nullptr) std::cout << "# ";
+        std::cout << (dest == nullptr ? "(0, 0)" : dest->pos.toString()) << "," << std::endl;
+    }
+    std::cout << "])" << std::endl;
 
     return 0;
 }

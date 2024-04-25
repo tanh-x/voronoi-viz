@@ -9,6 +9,8 @@
 #include "utils/math/mathematics.hpp"
 #include "utils/LinkedSplayTree.hpp"
 
+#define NUMERICAL_TOLERANCE 1e-7
+
 class Event;
 
 class BeachValue;

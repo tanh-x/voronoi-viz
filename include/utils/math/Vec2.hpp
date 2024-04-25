@@ -1,9 +1,11 @@
 #ifndef VORONOI_VIZ_VEC2_HPP
 #define VORONOI_VIZ_VEC2_HPP
 
+#include "mathematics.hpp"
+
 #define VEC2_NO_IDENTIFIER (-12345)
 
-#define VEC2_INFTY_PLACEHOLDER (1.234567e8f)
+#define VEC2_PLACEHOLDER (1.234567e8f)
 
 class Vec2 {
 public:
@@ -12,7 +14,7 @@ public:
     int identifier {VEC2_NO_IDENTIFIER};
     bool isInfinite = false;
 
-    Vec2(double x, double y) : x(x), y(y) {}
+    Vec2(double x, double y);
 
     Vec2(double x, double y, int id) : x(x), y(y), identifier(id) {}
 

@@ -1,3 +1,4 @@
+#include <cmath>
 #include "Fortune.hpp"
 
 void beachLineToString(LinkedNode<BeachKey*, BeachValue*>* node, int depth) {
@@ -48,7 +49,7 @@ DCEL* computeVoronoi(const std::vector<Vec2> &sites) {
             for (auto &v: sites) {
                 double radius = event->circleCenter.y - event->pos.y;
                 double dist = event->circleCenter.distanceTo(v);
-                if (dist - radius < -1e-6) event->isInvalidated = true;
+                if (radius - dist > NUMERICAL_TOLERANCE) event->isInvalidated = true;
             }
 
             if (event->isInvalidated) continue;
@@ -58,7 +59,7 @@ DCEL* computeVoronoi(const std::vector<Vec2> &sites) {
     }
 
     finalizeEdges(beachLine, dcel);
-    return dcel->createDCEL();
+    return dcel->createDCEL(sites);
 }
 
 void processSiteEvent(
@@ -104,52 +105,118 @@ void processSiteEvent(
     auto* rightBreakpoint = new BeachKey(sweepY, newArc->focus, rightArc->focus);
 
     // Add the two breakpoint nodes into the tree
+    auto* newEdge = new VertexPair();
+
     LinkedNode<BeachKey*, BeachValue*>* leftBpNode = beachLine.add(
         leftBreakpoint,
-        BeachValue::breakpointPtr(new VertexPair()),
+        BeachValue::breakpointPtr(newEdge),
         false
     );
     assert(leftBpNode->parent == nullptr || !leftBpNode->parent->key->isArc);
 
-    LinkedNode<BeachKey*, BeachValue*>* rightBpNode = beachLine.add(
-        rightBreakpoint,
-        BeachValue::breakpointPtr(new VertexPair()),
-        false
+    LinkedNode<BeachKey*, BeachValue*>* rightBpNode = nullptr;
+    bool arcAboveSameLevelDegen = arcAbove->focus->y - event->pos.y < NUMERICAL_TOLERANCE;
+    if (!arcAboveSameLevelDegen) {
+        rightBpNode = beachLine.add(
+            rightBreakpoint,
+            BeachValue::breakpointPtr(newEdge),
+            false
+        );
+        assert(rightBpNode->parent == nullptr || !rightBpNode->parent->key->isArc);
+    }
+
+    // Add new edge records into the factory
+    Vec2 bpProxyOriginVec(
+        event->pos.x,
+        pointDirectrixParabola(event->pos.x, *arcAbove->focus, *sweepY)
     );
-    assert(rightBpNode->parent == nullptr || !rightBpNode->parent->key->isArc);
 
-    // Create three new nodes corresponding to the three arcs
-    auto* newArcNode = new LinkedNode<BeachKey*, BeachValue*>(newArc, BeachValue::arcPtr(nullptr));
-    auto* leftArcNode = new LinkedNode<BeachKey*, BeachValue*>(leftArc, BeachValue::arcPtr(nullptr));
-    auto* rightArcNode = new LinkedNode<BeachKey*, BeachValue*>(rightArc, BeachValue::arcPtr(nullptr));
+    if (bpProxyOriginVec.isInfinite) {
+        assert(arcAboveSameLevelDegen);
+        // Degeneracy case: Multiple events at the same x, AND arc above has the same focus.x
+        bpProxyOriginVec.x = (newArc->focus->x + arcAbove->focus->x) / 2.0 + 0.001234;
+        bpProxyOriginVec.isInfinite = false;
+    }
 
-    // Set up the subtree structure
-    assert(leftBpNode->left == nullptr);
-    assert(rightBpNode->left == nullptr);
-    assert(rightBpNode->right == nullptr);
-    leftBpNode->setLeftChild(leftArcNode);
-    rightBpNode->setLeftChild(newArcNode);
-    rightBpNode->setRightChild(rightArcNode);
+    double angle = atan(pointDirectrixGradient(event->pos.x, *arcAbove->focus, *sweepY));
+    auto* bpEdgeProxyOrigin = new Vertex(-1, bpProxyOriginVec);
+    newEdge->offerVertex(bpEdgeProxyOrigin);
+    newEdge->angle = angle;
+    dcel->vertexPairs.insert(newEdge);
 
-    // Handle linked list operations
-    leftArcNode->linkPrev(arcAboveNode->prev);
-    leftArcNode->linkNext(leftBpNode);
-    newArcNode->linkPrev(leftBpNode);
-    newArcNode->linkNext(rightBpNode);
-    rightArcNode->linkPrev(rightBpNode);
-    rightArcNode->linkNext(arcAboveNode->next);
+    if (rightBpNode != nullptr) {
+        // Standard case
 
-    // The new root should replace the previous arc's node
-    assert(arcAboveNode->parent == leftBpNode->parent);
+        // Create three new nodes corresponding to the three arcs
+        auto* newArcNode = new LinkedNode<BeachKey*, BeachValue*>(newArc, BeachValue::arcPtr(nullptr));
+        auto* leftArcNode = new LinkedNode<BeachKey*, BeachValue*>(leftArc, BeachValue::arcPtr(nullptr));
+        auto* rightArcNode = new LinkedNode<BeachKey*, BeachValue*>(rightArc, BeachValue::arcPtr(nullptr));
 
-    // Invalidate the split arc's circle event
-    if (arcAboveNode->value->circleEvent != nullptr) arcAboveNode->value->circleEvent->isInvalidated = true;
+        // Set up the subtree structure
+        assert(leftBpNode->left == nullptr);
+        assert(rightBpNode->left == nullptr);
+        assert(rightBpNode->right == nullptr);
+        leftBpNode->setLeftChild(leftArcNode);
+        rightBpNode->setLeftChild(newArcNode);
+        rightBpNode->setRightChild(rightArcNode);
 
-    delete arcAbove;
+        // Handle linked list operations
+        leftArcNode->linkPrev(arcAboveNode->prev);
+        leftArcNode->linkNext(leftBpNode);
+        newArcNode->linkPrev(leftBpNode);
+        newArcNode->linkNext(rightBpNode);
+        rightArcNode->linkPrev(rightBpNode);
+        rightArcNode->linkNext(arcAboveNode->next);
 
-    // Check for potential circle eventQueue caused by these new arcs
-    checkCircleEvent(leftArcNode, sweepY, eventQueue);
-    checkCircleEvent(rightArcNode, sweepY, eventQueue);
+        // The new root should replace the previous arc's node
+        assert(arcAboveNode->parent == leftBpNode->parent);
+
+        // Invalidate the split arc's circle event
+        if (arcAboveNode->value->circleEvent != nullptr) arcAboveNode->value->circleEvent->isInvalidated = true;
+
+        delete arcAbove;
+
+        // Check for potential circle eventQueue caused by these new arcs
+        checkCircleEvent(leftArcNode, sweepY, eventQueue);
+        checkCircleEvent(rightArcNode, sweepY, eventQueue);
+    } else {
+        // Degeneracy case: Multiple events at the same x, AND arc above has the same focus.x
+        assert(arcAboveSameLevelDegen);
+
+        // Set up the subtree structure
+        assert(leftBpNode->left == nullptr);
+        // Create three new nodes corresponding to the three arcs
+        bool newIsLeft = event->pos.x < arcAbove->focus->x;
+        auto* leftArcNode = new LinkedNode<BeachKey*, BeachValue*>(
+            newIsLeft ? newArc : leftArc,
+            BeachValue::arcPtr(nullptr)
+        );
+        auto* rightArcNode = new LinkedNode<BeachKey*, BeachValue*>(
+            newIsLeft ? rightArc : newArc,
+            BeachValue::arcPtr(nullptr)
+        );
+
+        leftBpNode->setLeftChild(leftArcNode);
+        leftBpNode->setRightChild(rightArcNode);
+
+        // Handle linked list operations
+        leftArcNode->linkPrev(arcAboveNode->prev);
+        leftArcNode->linkNext(leftBpNode);
+        rightArcNode->linkPrev(rightBpNode);
+        rightArcNode->linkNext(arcAboveNode->next);
+
+        // The new root should replace the previous arc's node
+        assert(arcAboveNode->parent == leftBpNode->parent);
+
+        // Invalidate the split arc's circle event
+        if (arcAboveNode->value->circleEvent != nullptr) arcAboveNode->value->circleEvent->isInvalidated = true;
+
+        delete arcAbove;
+
+        // Check for potential circle eventQueue caused by these new arcs
+        checkCircleEvent(leftArcNode, sweepY, eventQueue);
+        checkCircleEvent(rightArcNode, sweepY, eventQueue);
+    }
 }
 
 
@@ -159,7 +226,8 @@ void checkCircleEvent(
     PriorityQueue<Event*, EventComparator> &eventQueue
 ) {
     BeachKey* arc = arcNode->key;
-    assert(arc->isArc);
+//    assert(arc->isArc);
+    if (arc->isArc) return;
     if (arcNode->prev == nullptr /* || arcNode->prev->key->leftSite == nullptr */) return;
     if (arcNode->next == nullptr /* || arcNode->next->key->rightSite == nullptr */) return;
 
@@ -211,13 +279,13 @@ void processCircleEvent(
     assert(arcNode->next != nullptr);
 
     // Add the center of the circle as a new Voronoi vertex
-    assert(!event->circleCenter.isInfinite);
-    auto* newVertex = new Vertex(999, event->circleCenter);
-    dcel->vertices.insert(newVertex);
+    if (event->circleCenter.isInfinite) return;
+    auto* newVoronoiVertex = new Vertex(static_cast<int>(dcel->vertices.size() + 1), event->circleCenter);
+    dcel->vertices.insert(newVoronoiVertex);
 
     // Connect breakpoints' edges to it
-    arcNode->prev->value->breakpointEdge->offerVertex(newVertex);
-    arcNode->next->value->breakpointEdge->offerVertex(newVertex);
+    arcNode->prev->value->breakpointEdge->offerVertex(newVoronoiVertex);
+    arcNode->next->value->breakpointEdge->offerVertex(newVoronoiVertex);
 
     // Then, we need kill the breakpoints and connect the disappearing arc's neighbors in the beach line
     // First, get the nodes to be dissolved and merged
@@ -236,8 +304,11 @@ void processCircleEvent(
     auto* mergedBreakpoint = new BeachKey(sweepY, leftBp->leftSite, rightBp->rightSite);
     auto* mergedBpNode = new LinkedNode<BeachKey*, BeachValue*>(
         mergedBreakpoint,
-        BeachValue::breakpointPtr(new VertexPair({newVertex, nullptr}))
+        BeachValue::breakpointPtr(new VertexPair({newVoronoiVertex, nullptr}))
     );
+    dcel->vertexPairs.insert(mergedBpNode->value->breakpointEdge);
+    double angle = atan(perpendicularBisectorSlope(*leftBp->leftSite, *rightBp->rightSite));
+    mergedBpNode->value->breakpointEdge->angle = angle > 0 ? angle - M_PI : angle;
 
     // Handle linked list operations
     assert(leftBpNode->prev->key->isArc);
@@ -288,8 +359,8 @@ void processCircleEvent(
     }
 
     // Clean up the removed arc
-//    delete arc;
-//    delete arcNode;
+    delete arc;
+    delete arcNode;
 }
 
 void finalizeEdges(
@@ -309,7 +380,8 @@ double BeachKey::fieldOrdering(double t) const {
         assert(focus == nullptr);
         assert(leftSite);
         assert(rightSite);
-        return pointDirectrixIntersectionX(*leftSite, *rightSite, t);
+        double intersectionX = pointDirectrixIntersectionX(*leftSite, *rightSite, t);
+        return (std::isnan(intersectionX) ? (leftSite->x + rightSite->x) / 2.0 : intersectionX);
     }
 }
 

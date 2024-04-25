@@ -12,6 +12,7 @@ public:
     int id;
     Vec2 pos;
     HalfEdge* incidentEdge;
+    bool isBoundary = false;
 
     [[nodiscard]] double x() const;
 

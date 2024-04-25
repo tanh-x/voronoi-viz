@@ -1,8 +1,10 @@
 #ifndef VORONOI_VIZ_HALFEDGE_HPP
 #define VORONOI_VIZ_HALFEDGE_HPP
 
+#include <limits>
 #include "Vertex.hpp"
 #include "Face.hpp"
+#include "utils/math/mathematics.hpp"
 
 class Face;
 
@@ -25,6 +27,8 @@ public:
 struct VertexPair {
     Vertex* v1 = nullptr;
     Vertex* v2 = nullptr;
+
+    double angle {QUIET_NAN};
 
     void offerVertex(Vertex* vertex);
 };
