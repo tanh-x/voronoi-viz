@@ -83,14 +83,14 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
 
 
     // Add in the bounding box
-    Vertex* bl = dcel->insertVertex(1, {bottomLeft.x, bottomLeft.y});
-    Vertex* br = dcel->insertVertex(2, {topRight.x, bottomLeft.y});
-    Vertex* tr = dcel->insertVertex(3, {topRight.x, topRight.y});
-    Vertex* tl = dcel->insertVertex(4, {bottomLeft.x, topRight.y});
-    dcel->insertEdge(bl, br);
-    dcel->insertEdge(br, tr);
-    dcel->insertEdge(tr, tl);
-    dcel->insertEdge(tl, bl);
+//    Vertex* bl = dcel->insertVertex(1, {bottomLeft.x, bottomLeft.y});
+//    Vertex* br = dcel->insertVertex(2, {topRight.x, bottomLeft.y});
+//    Vertex* tr = dcel->insertVertex(3, {topRight.x, topRight.y});
+//    Vertex* tl = dcel->insertVertex(4, {bottomLeft.x, topRight.y});
+//    dcel->insertEdge(bl, br);
+//    dcel->insertEdge(br, tr);
+//    dcel->insertEdge(tr, tl);
+//    dcel->insertEdge(tl, bl);
 
     dcel->boundingTopRight.x = topRight.x;
     dcel->boundingTopRight.y = topRight.y;
@@ -103,17 +103,30 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
         assert(p->angle != QUIET_NAN);
         assert(p->v1 != nullptr);
 
-        double t = 15;
+        double t = 2;
         Vec2 ds = Vec2(t * cos(p->angle), t * sin(p->angle));
 
         if (vertices.find(p->v1) == vertices.end()) {
+            // Vert 1 is a site event origin
             if (p->v2 == nullptr) {
+                // Both vertices are unbounded
+//                assert(p->v1->y() == INFINITY);
+
                 // Vert 1 is a site event origin, and is a full unbounded line
                 p->v1 = dcel->insertVertex(-1, p->v1->pos - ds);
                 p->v2 = dcel->insertVertex(-1, p->v1->pos + ds);
             } else {
                 // Vert 1 is a site event origin, vert 2 is a voronoi vertex
                 assert(p->v2 != nullptr);
+
+                // Rectify an unbounded y at v1
+                if (p->v1->pos.isInfinite) {
+                    assert(p->v1->x() != INFINITY && p->v1->y() == INFINITY);
+
+                    p->v1->pos.y = p->v2->y();
+                    p->v1->pos.isInfinite = p->v2->y() == INFINITY;
+                }
+
                 if (p->v1->x() < p->v2->x()) ds = ds * -1;
                 p->v1 = dcel->insertVertex(-1, p->v2->pos + ds);
             }
@@ -122,7 +135,7 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
             p->v2 = dcel->insertVertex(-1, p->v1->pos + ds);
         } else {
             // Vert 1 is a voronoi vertex, and vert 2 is non null
-            // so vert 2 can't be a site event origin
+            // so vert 2 can't be a site event origin, and thus is another voronoi vertex
             assert(vertices.find(p->v2) != vertices.end());
         }
 
@@ -130,5 +143,26 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
     }
 
     return dcel;
+}
+
+void DCELFactory::offerVertex(Vertex* vertex) {
+    printf("Factory was offered vertex %s: %s\n", vertex->toString().c_str(), vertex->pos.toString().c_str());
+    vertices.insert(vertex);
+}
+
+void DCELFactory::offerPair(VertexPair* vertexPair) {
+    Vertex* v1 = vertexPair->v1;
+    Vertex* v2 = vertexPair->v2;
+    printf("Factory was offered vertex pair: <\n\tFROM %s\n\tTO\t %s\n> with angle %f rad (%f deg)\n",
+           v1 == nullptr ? "null" : (v1->toString() + " " + v1->pos.toString()).c_str(),
+           (v2 == nullptr ? "null" : (v2->toString() + " " + v2->pos.toString()).c_str()),
+           vertexPair->angle,
+           vertexPair->angle / M_PI * 180.0
+    );
+    vertexPairs.insert(vertexPair);
+}
+
+int DCELFactory::numVertices() {
+    return static_cast<int>(vertices.size());
 }
 

@@ -43,12 +43,21 @@ private:
 
 class DCELFactory {
 public:
-    std::unordered_set<Vertex*> vertices {};
-    std::unordered_set<VertexPair*> vertexPairs {};
+    DCELFactory() = default;
+
+    void offerVertex(Vertex* vertex);
+
+
+    void offerPair(VertexPair* vertexPair);
+
+    int numVertices();
 
     DCEL* createDCEL(const std::vector<Vec2> &sites);
 
-    DCELFactory() = default;
+
+private:
+    std::unordered_set<Vertex*> vertices {};
+    std::unordered_set<VertexPair*> vertexPairs {};
 };
 
 #endif //VORONOI_VIZ_DCEL_HPP

@@ -67,14 +67,15 @@ int main(int argc, char* argv[]) {
 
     // Start the algorithm
     DCEL* result = computeVoronoi(sites);
+    printf("\n\n--- FINISHED ---\n\n");
     printf("V: %d, HE: %d, F: %d\n", result->numVertices(), result->numHalfEdges(), result->numFaces());
 
-    std::cout << "Vertices:\n" << std::endl;
+    std::cout << "\nVertices:\n" << std::endl;
     for (auto v: result->vertices) {
         std::cout << v->toString() << v->pos.toString() << std::endl;
     }
 
-    std::cout << "Edges:\n" << std::endl;
+    std::cout << "\nEdges:\n" << std::endl;
 
     for (auto e: result->halfEdges) {
         Vertex* origin = e->origin;
@@ -84,10 +85,8 @@ int main(int argc, char* argv[]) {
     }
 
 
-
-
     // TODO: DEBUGGING ONLY -------------
-    std::cout << "DEBUGGING: Generated python mpl syntax:\n```" << std::endl;
+    std::cout << "\n\nDEBUGGING: Generated python mpl syntax:\n```\n\n" << std::endl;
     std::cout << "sites = np.array([" << std::endl;
     for (auto s: sites) {
         std::cout << "\t(" << std::to_string(s.x) << ", " << std::to_string(s.y) << ")," << std::endl;
@@ -110,7 +109,7 @@ int main(int argc, char* argv[]) {
         if (dest == nullptr || e->origin == nullptr) std::cout << "# ";
         std::cout << (dest == nullptr ? "(0, 0)" : dest->pos.toString()) << "," << std::endl;
     }
-    std::cout << "])" << std::endl;
+    std::cout << "])\n" << std::endl;
 
     return 0;
 }

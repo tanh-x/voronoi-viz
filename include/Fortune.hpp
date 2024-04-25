@@ -42,10 +42,7 @@ public:
     Vec2* leftSite {nullptr};
     Vec2* rightSite {nullptr};
 
-    [[nodiscard]] std::string toString() const {
-        if (isArc) return "ARC[" + std::to_string(focus->identifier) + "]";
-        else return "BP[" + std::to_string(leftSite->identifier) + "," + std::to_string(rightSite->identifier) + "]";
-    }
+    [[nodiscard]] std::string toString() const;
 };
 
 class BeachValue {
@@ -82,7 +79,10 @@ public:
 
 
 struct EventComparator {
-    bool operator()(Event* a, Event* b) const { return a->pos.y > b->pos.y; }
+    bool operator()(Event* a, Event* b) const {
+        if (std::abs(a->pos.y - b->pos.y) < NUMERICAL_TOLERANCE) return a->pos.x < b->pos.x;
+        return a->pos.y > b->pos.y;
+    }
 };
 
 struct BeachLineComparator {
@@ -120,11 +120,13 @@ void finalizeEdges(
     DCELFactory* dcel
 );
 
-void checkCircleEvent(
+Event* checkCircleEvent(
     LinkedNode<BeachKey*, BeachValue*>* arcNode,
     const double* sweepY,
     PriorityQueue<Event*, EventComparator> &eventQueue
 );
 
+
+void offerCircleEventPair(PriorityQueue<Event*, EventComparator> &eventQueue, Event* circEvent1, Event* circEvent2);
 
 #endif
