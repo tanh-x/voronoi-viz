@@ -19,6 +19,7 @@ FortuneSweeper::FortuneSweeper(const std::vector<Vec2> &sites) : sites(sites) {
 void FortuneSweeper::stepNextEvent() {
     if (eventQueue->empty()) throw std::out_of_range("Event queue is empty; all events already handled.");
 
+
     Event* event = eventQueue->poll();
     currentEventCounter++;
     sweepY = event->y();
@@ -40,6 +41,8 @@ void FortuneSweeper::stepNextEvent() {
         }
         handleCircleEvent(event);
     }
+
+    lastHandledEvent = event;
 }
 
 
@@ -103,7 +106,7 @@ void FortuneSweeper::handleSiteEvent(Event* event) {
     assert(leftBpNode->parent == nullptr || !leftBpNode->parent->key->isArc);
 
     LinkedNode<Chain*, TreeValueFacade*>* rightBpNode = nullptr;
-    bool arcAboveSameLevelDegen = arcAbove->focus->y - event->pos.y < NUMERICAL_TOLERANCE;
+    bool arcAboveSameLevelDegen = softEquals(arcAbove->focus->y, event->pos.y);
     if (!arcAboveSameLevelDegen) {
         rightBpNode = beachLine->add(
             rightBreakpoint,
@@ -350,9 +353,9 @@ void FortuneSweeper::offerCircleEventPair(Event* circEvent1, Event* circEvent2) 
     bool addEvent2;
     if (circEvent1 != nullptr && circEvent2 != nullptr) {
         addEvent1 = true;
-        addEvent2 = std::abs(circEvent1->pos.x - circEvent2->pos.x) > NUMERICAL_TOLERANCE
-                    || std::abs(circEvent1->pos.y - circEvent2->pos.y) > NUMERICAL_TOLERANCE
-                    || circEvent1->arcNode->key != circEvent2->arcNode->key;
+        addEvent2 = !softEquals(circEvent1->pos.x, circEvent2->pos.x)
+                    || !softEquals(circEvent1->pos.y, circEvent2->pos.y)
+                    || circEvent1->arcNode->key->focus != circEvent2->arcNode->key->focus;
     } else {
         addEvent1 = circEvent1 != nullptr;
         addEvent2 = circEvent2 != nullptr;

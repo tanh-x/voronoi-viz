@@ -53,7 +53,6 @@ public:
 
     DCEL* createDCEL(const std::vector<Vec2> &sites);
 
-
 private:
     std::unordered_set<Vertex*> vertices {};
     std::unordered_set<VertexPair*> vertexPairs {};

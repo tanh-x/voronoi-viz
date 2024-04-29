@@ -29,6 +29,8 @@ double pointDirectrixIntersectionX(
 
 double perpendicularBisectorSlope(const Vec2 &leftSite, const Vec2 &rightSite);
 
+bool softEquals(double x, double y);
+
 Vec2 pointDirectrixIntersectionPos(
     const Vec2 &leftParabolaFocus,
     const Vec2 &rightParabolaFocus,

@@ -22,6 +22,8 @@ public:
     HalfEdge() : origin {nullptr}, dest {nullptr} {}
 
     HalfEdge(Vertex* origin, Vertex* dest) : origin(origin), dest(dest) {}
+
+    [[nodiscard]] const char* toString() const;
 };
 
 struct VertexPair {

@@ -29,6 +29,8 @@ private:
     LinkedSplayTree<Chain*, TreeValueFacade*, ChainComparator>* beachLine;
     DCELFactory* factory;
 
+    Event* lastHandledEvent;
+
     void handleSiteEvent(Event* event);
 
     void handleCircleEvent(Event* event);

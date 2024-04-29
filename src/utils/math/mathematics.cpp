@@ -69,3 +69,7 @@ double perpendicularBisectorSlope(const Vec2 &leftSite, const Vec2 &rightSite) {
     if (dx == 0) return DOUBLE_INFINITY;
     else return dy / dx;
 }
+
+bool softEquals(double x, double y) {
+    return std::abs(x - y) < NUMERICAL_TOLERANCE;
+}

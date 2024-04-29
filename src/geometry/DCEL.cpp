@@ -5,7 +5,8 @@
 #include "geometry/DCEL.hpp"
 #include "utils/math/mathematics.hpp"
 
-#define BOUNDING_BOX_PADDING 0.235
+// Any reasonable number (around 0.1 to 0.5), aesthetics only
+#define BOUNDING_BOX_PADDING 0.362160297
 
 Vertex* DCEL::insertVertex(int id, Vec2 position) {
     auto* v = new Vertex(id, position);
@@ -76,21 +77,21 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
     // Add some padding
     double width = topRight.x - bottomLeft.x;
     double height = topRight.y - bottomLeft.y;
-    double largestDimension = std::max(width, height);
-    Vec2 padding = Vec2(largestDimension, largestDimension) * BOUNDING_BOX_PADDING;
+    double majorAxis = std::max(width, height);
+    Vec2 padding = Vec2(majorAxis, majorAxis) * BOUNDING_BOX_PADDING;
     topRight = topRight + padding;
     bottomLeft = bottomLeft - padding;
 
 
     // Add in the bounding box
-//    Vertex* bl = dcel->insertVertex(1, {bottomLeft.x, bottomLeft.y});
-//    Vertex* br = dcel->insertVertex(2, {topRight.x, bottomLeft.y});
-//    Vertex* tr = dcel->insertVertex(3, {topRight.x, topRight.y});
-//    Vertex* tl = dcel->insertVertex(4, {bottomLeft.x, topRight.y});
-//    dcel->insertEdge(bl, br);
-//    dcel->insertEdge(br, tr);
-//    dcel->insertEdge(tr, tl);
-//    dcel->insertEdge(tl, bl);
+    Vertex* bl = dcel->insertVertex(1, {bottomLeft.x, bottomLeft.y});
+    Vertex* br = dcel->insertVertex(2, {topRight.x, bottomLeft.y});
+    Vertex* tr = dcel->insertVertex(3, {topRight.x, topRight.y});
+    Vertex* tl = dcel->insertVertex(4, {bottomLeft.x, topRight.y});
+    dcel->insertEdge(bl, br);
+    dcel->insertEdge(br, tr);
+    dcel->insertEdge(tr, tl);
+    dcel->insertEdge(tl, bl);
 
     dcel->boundingTopRight.x = topRight.x;
     dcel->boundingTopRight.y = topRight.y;
@@ -103,7 +104,7 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
         assert(p->angle != QUIET_NAN);
         assert(p->v1 != nullptr);
 
-        double t = 2;
+        double t = majorAxis;
         Vec2 ds = Vec2(t * cos(p->angle), t * sin(p->angle));
 
         if (vertices.find(p->v1) == vertices.end()) {
