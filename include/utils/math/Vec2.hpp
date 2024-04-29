@@ -36,7 +36,7 @@ public:
 
     [[nodiscard]] Vec2 normalized() const;
 
-    [[nodiscard]] std::string toString() const;
+    [[nodiscard]] const char* toString() const;
 
     static Vec2 infinity();
 };

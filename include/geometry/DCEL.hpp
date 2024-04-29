@@ -13,10 +13,10 @@ class DCEL {
 public:
     friend class DCELFactory;
 
-
     std::vector<Vertex*> vertices;
     std::vector<HalfEdge*> halfEdges;
     std::vector<Face*> faces;
+    std::vector<Vec2> sites;
 
     Vec2 boundingBottomLeft {Vec2(-DOUBLE_INFINITY, -DOUBLE_INFINITY)};
     Vec2 boundingTopRight {Vec2(DOUBLE_INFINITY, DOUBLE_INFINITY)};
@@ -46,7 +46,6 @@ public:
     DCELFactory() = default;
 
     void offerVertex(Vertex* vertex);
-
 
     void offerPair(VertexPair* vertexPair);
 

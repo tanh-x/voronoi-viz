@@ -146,7 +146,7 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
 }
 
 void DCELFactory::offerVertex(Vertex* vertex) {
-    printf("Factory was offered vertex %s: %s\n", vertex->toString().c_str(), vertex->pos.toString().c_str());
+    printf("Factory was offered vertex %s: %s\n", vertex->toString().c_str(), vertex->pos.toString());
     vertices.insert(vertex);
 }
 
@@ -155,7 +155,7 @@ void DCELFactory::offerPair(VertexPair* vertexPair) {
     Vertex* v2 = vertexPair->v2;
     printf("Factory was offered vertex pair: <\n\tFROM %s\n\tTO\t %s\n> with angle %f rad (%f deg)\n",
            v1 == nullptr ? "null" : (v1->toString() + " " + v1->pos.toString()).c_str(),
-           (v2 == nullptr ? "null" : (v2->toString() + " " + v2->pos.toString()).c_str()),
+           v2 == nullptr ? "null" : (v2->toString() + " " + v2->pos.toString()).c_str(),
            vertexPair->angle,
            vertexPair->angle / M_PI * 180.0
     );

@@ -1,7 +1,7 @@
 #include <stdexcept>
+#include <cassert>
 #include "geometry/HalfEdge.hpp"
 #include "geometry/Vertex.hpp"
-#include "Fortune.hpp"
 
 void VertexPair::offerVertex(Vertex* vertex) {
     if (v1 == nullptr) this->v1 = vertex;

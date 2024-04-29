@@ -38,12 +38,13 @@ Vec2 Vec2::normalized() const {
     return {x * k, y * k};
 }
 
-std::string Vec2::toString() const {
-    std::string identifierStr = (
-        identifier == VEC2_NO_IDENTIFIER
-        ? "" : ("p" + std::to_string(identifier) + " = ")
-    );
-    return identifierStr + "(" + std::to_string(x) + ", " + std::to_string(y) + ")";
+const char* Vec2::toString() const {
+    static char result[64];  // %d can only be <11 bytes
+
+    if (identifier == VEC2_NO_IDENTIFIER) sprintf(result, "(%f, %f)", x, y);
+    else sprintf(result, "%d=(%f, %f)", identifier, x, y);
+
+    return result;
 }
 
 double Vec2::distanceTo(const Vec2 &other) const {

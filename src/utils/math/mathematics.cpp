@@ -1,7 +1,7 @@
 #include <cmath>
 #include <cassert>
 #include "utils/math/mathematics.hpp"
-#include "Fortune.hpp"
+#include "fortune/Fortune.hpp"
 
 double computeDeterminantTest(const Vec2 &a, const Vec2 &b, const Vec2 &c) {
     return (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
@@ -25,7 +25,7 @@ Vec2 computeCircleCenter(const Vec2 &a, const Vec2 &b, const Vec2 &c) {
 double pointDirectrixParabola(double x, Vec2 focus, double directrix) {
     double result = (sq(x) - 2 * focus.x * x + sq(focus.x) + sq(focus.y) - sq(directrix))
                     / (2 * (focus.y - directrix));
-    assert(result != (0.0f / 0.0f));
+    assert(!std::isnan(result));
     return result;
 }
 

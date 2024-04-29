@@ -3,7 +3,7 @@
 #include <fstream>
 #include "tests.hpp"
 #include "utils/math/Vec2.hpp"
-#include "Fortune.hpp"
+#include "fortune/Fortune.hpp"
 
 
 std::vector<Vec2> parseSites(const std::string &filepath) {
@@ -66,7 +66,9 @@ int main(int argc, char* argv[]) {
     }
 
     // Start the algorithm
-    DCEL* result = computeVoronoi(sites);
+    FortuneSweeper algo(sites);
+    DCEL* result = algo.computeAll();
+
     printf("\n\n--- FINISHED ---\n\n");
     printf("V: %d, HE: %d, F: %d\n", result->numVertices(), result->numHalfEdges(), result->numFaces());
 

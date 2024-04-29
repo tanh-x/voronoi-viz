@@ -5,6 +5,8 @@
 #include <limits>
 #include "utils/math/Vec2.hpp"
 
+#define NUMERICAL_TOLERANCE 1e-7
+
 class Vec2;
 
 #define sq(x) ((x) * (x))
