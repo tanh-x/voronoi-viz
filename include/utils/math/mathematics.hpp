@@ -37,4 +37,10 @@ Vec2 pointDirectrixIntersectionPos(
     double directrix
 );
 
+std::array<float, 16> orthographicProjection(
+    Vec2 bottomLeft,
+    Vec2 topRight,
+    float near, float far
+);
+
 #endif //VORONOI_VIZ_MATHEMATICS_HPP

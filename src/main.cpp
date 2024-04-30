@@ -4,33 +4,8 @@
 #include "tests.hpp"
 #include "utils/math/Vec2.hpp"
 #include "fortune/Fortune.hpp"
-
-
-std::vector<Vec2> parseSites(const std::string &filepath) {
-    std::ifstream file(filepath);
-
-    if (!file.is_open()) {
-        std::cerr << "ERROR: Cannot open provided input file: " << filepath << std::endl;
-        exit(1);
-    }
-
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    std::string content = buffer.str();
-    std::stringstream ss(content);
-
-    char ignored;
-    double x, y;
-
-    std::vector<Vec2> sites;
-    int id = 0;
-    while (ss >> ignored >> x >> ignored >> y >> ignored) {
-        sites.emplace_back(x, y, ++id);
-    }
-
-    return sites;
-}
-
+#include "utils/files.hpp"
+#include "graphics/Renderer.hpp"
 
 int main(int argc, char* argv[]) {
 //    runAllTests();
@@ -67,19 +42,19 @@ int main(int argc, char* argv[]) {
 
     // Start the algorithm
     FortuneSweeper algo(sites);
-    DCEL* result = algo.computeAll();
+    DCEL* dcel = algo.computeAll();
 
     printf("\n\n--- FINISHED ---\n\n");
-    printf("V: %d, HE: %d, F: %d\n", result->numVertices(), result->numHalfEdges(), result->numFaces());
+    printf("V: %d, HE: %d, F: %d\n", dcel->numVertices(), dcel->numHalfEdges(), dcel->numFaces());
 
     std::cout << "\nVertices:\n" << std::endl;
-    for (auto v: result->vertices) {
+    for (auto v: dcel->vertices) {
         std::cout << v->toString() << v->pos.toString() << std::endl;
     }
 
     std::cout << "\nEdges:\n" << std::endl;
 
-    for (auto e: result->halfEdges) {
+    for (auto e: dcel->halfEdges) {
         Vertex* origin = e->origin;
         Vertex* dest = e->dest;
         std::cout << (origin == nullptr ? "infty" : origin->toString() + origin->pos.toString()) << "->"
@@ -94,24 +69,33 @@ int main(int argc, char* argv[]) {
         std::cout << "\t(" << std::to_string(s.x) << ", " << std::to_string(s.y) << ")," << std::endl;
     }
     std::cout << "])\n\n# Vertex list\nverts = np.array([" << std::endl;
-    for (auto v: result->vertices) {
+    for (auto v: dcel->vertices) {
         std::cout << '\t' << v->pos.toString() << "," << std::endl;
     }
     std::cout << "])\n\n# Edge list\nv1 = np.array([" << std::endl;
-    for (auto e: result->halfEdges) {
+    for (auto e: dcel->halfEdges) {
         std::cout << '\t';
         Vertex* origin = e->origin;
         if (origin == nullptr || e->dest == nullptr) std::cout << "# ";
         std::cout << (origin == nullptr ? "(0, 0)" : origin->pos.toString()) << "," << std::endl;
     }
     std::cout << "])\n\nv2 = np.array([" << std::endl;
-    for (auto e: result->halfEdges) {
+    for (auto e: dcel->halfEdges) {
         std::cout << '\t';
         Vertex* dest = e->dest;
         if (dest == nullptr || e->origin == nullptr) std::cout << "# ";
         std::cout << (dest == nullptr ? "(0, 0)" : dest->pos.toString()) << "," << std::endl;
     }
     std::cout << "])\n" << std::endl;
+    // ----------------------
+
+
+    // Set up renderer
+    Renderer renderer = Renderer(720, 720);
+
+    renderer.initVertexObjects(dcel);
+    renderer.startRender();  // Blocking call
+    renderer.terminate();
 
     return 0;
 }

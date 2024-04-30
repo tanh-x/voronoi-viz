@@ -18,8 +18,10 @@ public:
     std::vector<Face*> faces;
     std::vector<Vec2> sites;
 
-    Vec2 boundingBottomLeft {Vec2(-DOUBLE_INFINITY, -DOUBLE_INFINITY)};
-    Vec2 boundingTopRight {Vec2(DOUBLE_INFINITY, DOUBLE_INFINITY)};
+    Vec2 bottomLeftBounds {Vec2(-DOUBLE_INFINITY, -DOUBLE_INFINITY)};
+    Vec2 topRightBounds {Vec2(DOUBLE_INFINITY, DOUBLE_INFINITY)};
+    double majorAxis = DOUBLE_INFINITY;
+    Vec2 centroid {Vec2(0, 0)};
 
     [[nodiscard]] int numVertices() const;
 
@@ -34,6 +36,11 @@ public:
         for (auto e: halfEdges) delete e;
         for (auto f: faces) delete f;
     }
+
+
+    [[nodiscard]] double getCenteredX(double x) const;
+
+    [[nodiscard]] double getCenteredY(double y) const;
 
 private:
     Vertex* insertVertex(int id, Vec2 position);

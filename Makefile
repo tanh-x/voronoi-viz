@@ -35,7 +35,7 @@ post_build: $(TARGET)
 	@echo -e "  ┌───────────"
 	@echo -e "  │ Finished compile jobs, cleaning object files..."
 	@echo -e "  └──"
-	@make clean_objects
+	@#make clean_objects
 	@echo -e "\n  ┌───────────"
 	@echo -e "  │ Finished all Makefile rules. Binary should be \"$(TARGET)\""
 	@echo -e "  └──\n"

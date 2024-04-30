@@ -10,8 +10,8 @@
 
 Vertex* DCEL::insertVertex(int id, Vec2 position) {
     auto* v = new Vertex(id, position);
-//    v->pos.x = std::clamp(v->pos.x, boundingBottomLeft.x, boundingTopRight.x);
-//    v->pos.y = std::clamp(v->pos.y, boundingBottomLeft.y, boundingTopRight.y);
+//    v->pos.x = std::clamp(v->pos.x, bottomLeftBounds.x, topRightBounds.x);
+//    v->pos.y = std::clamp(v->pos.y, bottomLeftBounds.y, topRightBounds.y);
     vertices.push_back(v);
     return v;
 }
@@ -36,6 +36,14 @@ int DCEL::numEdges() const {
 
 int DCEL::numFaces() const {
     return static_cast<int>(faces.size());
+}
+
+double DCEL::getCenteredX(double x) const {
+    return (x - centroid.x) / majorAxis;
+}
+
+double DCEL::getCenteredY(double y) const {
+    return (y - centroid.y) / majorAxis;
 }
 
 struct VertexPairComparator {
@@ -82,7 +90,6 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
     topRight = topRight + padding;
     bottomLeft = bottomLeft - padding;
 
-
     // Add in the bounding box
     Vertex* bl = dcel->insertVertex(1, {bottomLeft.x, bottomLeft.y});
     Vertex* br = dcel->insertVertex(2, {topRight.x, bottomLeft.y});
@@ -93,10 +100,13 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
     dcel->insertEdge(tr, tl);
     dcel->insertEdge(tl, bl);
 
-    dcel->boundingTopRight.x = topRight.x;
-    dcel->boundingTopRight.y = topRight.y;
-    dcel->boundingBottomLeft.x = bottomLeft.x;
-    dcel->boundingBottomLeft.y = bottomLeft.y;
+    dcel->topRightBounds.x = topRight.x;
+    dcel->topRightBounds.y = topRight.y;
+    dcel->bottomLeftBounds.x = bottomLeft.x;
+    dcel->bottomLeftBounds.y = bottomLeft.y;
+    dcel->majorAxis = (majorAxis * (1 + 2 * BOUNDING_BOX_PADDING)) * 0.6;
+    dcel->centroid.x = (topRight.x + bottomLeft.x) * 0.5;
+    dcel->centroid.y = (topRight.y + bottomLeft.y) * 0.5;
 
     for (auto &p: vertexPairs) {
         if (p->v1 == p->v2) continue;

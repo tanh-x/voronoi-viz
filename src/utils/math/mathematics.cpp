@@ -73,3 +73,27 @@ double perpendicularBisectorSlope(const Vec2 &leftSite, const Vec2 &rightSite) {
 bool softEquals(double x, double y) {
     return std::abs(x - y) < NUMERICAL_TOLERANCE;
 }
+
+std::array<float, 16> orthographicProjection(
+    Vec2 bottomLeft,
+    Vec2 topRight,
+    float near, float far
+) {
+    std::array<float, 16> mat = {0};
+
+    auto left = static_cast<float>(bottomLeft.x);
+    auto right = static_cast<float>(topRight.x);
+    auto bottom = static_cast<float>(bottomLeft.y);
+    auto top = static_cast<float>(topRight.y);
+
+    mat[0] = 2.0f / (right - left);
+    mat[5] = 2.0f / (top - bottom);
+    mat[10] = -2.0f / (far - near);
+    mat[12] = -(right + left) / (right - left);
+    mat[13] = -(top + bottom) / (top - bottom);
+    mat[14] = -(far + near) / (far - near);
+    mat[15] = 1.0f;
+
+    return mat;
+}
+
