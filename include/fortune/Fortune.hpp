@@ -43,6 +43,9 @@ private:
 
     void beachLineToString(LinkedNode<Chain*, TreeValueFacade*>* node, int depth);
 
+    void handleSiteAtBottomDegen(Event* event);
+
+
 };
 
 #endif

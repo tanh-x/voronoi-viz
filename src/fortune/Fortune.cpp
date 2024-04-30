@@ -62,7 +62,9 @@ void FortuneSweeper::handleSiteEvent(Event* event) {
         if (arcAboveNode->key->isArc) break;
         // Check if it exactly coincides with the arc above
         if (softEquals(event->pos.x, arcAboveNode->key->fieldOrdering(sweepY))) {
-            assert(false);
+            assert(!arcAboveNode->key->isArc);
+            handleSiteAtBottomDegen(event);
+            return;
         }
         // Use the defined natural field ordering
         arcAboveNode = beachLine->compare(arcAboveNode->key, newArc) ? arcAboveNode->right : arcAboveNode->left;
@@ -350,7 +352,7 @@ Event* FortuneSweeper::checkAndCreateCircleEvent(LinkedNode<Chain*, TreeValueFac
         printf("Arc has previous circle event that resolves at (%f, %f)\n", prevCircleEvent->x(),
                prevCircleEvent->y());
         assert(!prevCircleEvent->isSiteEvent);
-        if (prevCircleEvent->y() > circleEventY) return nullptr;
+        if (prevCircleEvent->y() < circleEventY) return nullptr;
         else prevCircleEvent->isInvalidated = true;
     }
 
@@ -364,6 +366,12 @@ Event* FortuneSweeper::checkAndCreateCircleEvent(LinkedNode<Chain*, TreeValueFac
 
     // Return it to compare with the other one
     return circleEvent;
+}
+
+
+void FortuneSweeper::handleSiteAtBottomDegen(Event* event) {
+    printf("Degeneracy: site below breakpoint (%s), exiting", event->arcNode->key->toString());
+    assert(false);
 }
 
 
