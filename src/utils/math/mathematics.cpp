@@ -74,6 +74,11 @@ bool softEquals(double x, double y) {
     return std::abs(x - y) < NUMERICAL_TOLERANCE;
 }
 
+bool softEquals(Vec2 v1, Vec2 v2) {
+    return std::abs(v1.x - v2.x) < NUMERICAL_TOLERANCE
+           && std::abs(v1.y - v2.y) < NUMERICAL_TOLERANCE;
+}
+
 std::array<float, 16> orthographicProjection(
     Vec2 bottomLeft,
     Vec2 topRight,

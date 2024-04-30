@@ -218,67 +218,76 @@ void FortuneSweeper::handleCircleEvent(Event* event) {
 
     printf("Handling circle event for arc %s\n", arc->toString());
 
-    // Add the center of the circle as a new Voronoi vertex
-    if (event->circleCenter.isInfinite) return;
-    auto* newVoronoiVertex = new Vertex(factory->numVertices() + 1, event->circleCenter);
-    factory->offerVertex(newVoronoiVertex);
+    bool cocircular = softEquals(event->circleCenter, lastHandledEvent->circleCenter);
 
-    // Connect breakpoints' edges to it
-    LinkedNode<Chain*, TreeValueFacade*>* leftBpNode = arcNode->prev;
-    LinkedNode<Chain*, TreeValueFacade*>* rightBpNode = arcNode->next;
-    assert(leftBpNode != nullptr);
-    assert(rightBpNode != nullptr);
-    leftBpNode->value->breakpointEdge->offerVertex(newVoronoiVertex);
-    rightBpNode->value->breakpointEdge->offerVertex(newVoronoiVertex);
+    if (!cocircular) {  // Standard case
+        // Add the center of the circle as a new Voronoi vertex
+        if (event->circleCenter.isInfinite) return;
+        auto* newVoronoiVertex = new Vertex(factory->numVertices() + 1, event->circleCenter);
+        factory->offerVertex(newVoronoiVertex);
 
-    // Then, we need kill the breakpoints and connect the disappearing arc's neighbors in the beach line
-    // First, get the nodes to be dissolved and merged
-    Chain* leftBp = leftBpNode->key;
-    Chain* rightBp = rightBpNode->key;
-    assert(leftBp->rightSite == arc->focus);
-    assert(rightBp->leftSite == arc->focus);
+        // Connect breakpoints' edges to it
+        LinkedNode<Chain*, TreeValueFacade*>* leftBpNode = arcNode->prev;
+        LinkedNode<Chain*, TreeValueFacade*>* rightBpNode = arcNode->next;
+        assert(leftBpNode != nullptr);
+        assert(rightBpNode != nullptr);
+        leftBpNode->value->breakpointEdge->offerVertex(newVoronoiVertex);
+        rightBpNode->value->breakpointEdge->offerVertex(newVoronoiVertex);
+
+        // Then, we need kill the breakpoints and connect the disappearing arc's neighbors in the beach line
+        // First, get the nodes to be dissolved and merged
+        Chain* leftBp = leftBpNode->key;
+        Chain* rightBp = rightBpNode->key;
+        assert(leftBp->rightSite == arc->focus);
+        assert(rightBp->leftSite == arc->focus);
+
+        // Create the merged node
+        auto* mergedBreakpoint = new Chain(&sweepY, leftBp->leftSite, rightBp->rightSite);
+        auto* mergedBpNode = new LinkedNode<Chain*, TreeValueFacade*>(
+            mergedBreakpoint,
+            TreeValueFacade::breakpointPtr(new VertexPair({newVoronoiVertex, nullptr}))
+        );
+        double angle = atan(perpendicularBisectorSlope(*leftBp->leftSite, *rightBp->rightSite));
+        mergedBpNode->value->breakpointEdge->angle = angle > 0 ? angle - M_PI : angle;
+        factory->offerPair(mergedBpNode->value->breakpointEdge);
+
+        // Handle linked list operations
+        assert(leftBpNode->prev->key->isArc);
+        assert(leftBpNode->prev->key->isArc);
+        mergedBpNode->linkPrev(leftBpNode->prev);
+        mergedBpNode->linkNext(rightBpNode->next);
+
+        beachLine->splay(leftBpNode);
+        beachLine->splay(rightBpNode);
+        // Delete them from the beach line
+        LinkedNode<Chain*, TreeValueFacade*>* subtreeParent;
+        // "<"
+        assert(rightBpNode->left == leftBpNode);
+        assert(leftBpNode->right == arcNode);
+        subtreeParent = rightBpNode->parent;
+        mergedBpNode->setLeftChild(leftBpNode->left);
+        mergedBpNode->setRightChild(rightBpNode->right);
+
+        // ">"
+        //    assert(leftBpNode->right == rightBpNode);
+        //    assert(rightBpNode->left == arcNode);
+        //    subtreeParent = leftBpNode->parent;
+        //    mergedBpNode->setLeftChild(leftBpNode->left);
+        //    mergedBpNode->setRightChild(rightBpNode->right);
+
+        if (subtreeParent == nullptr) beachLine->root = mergedBpNode;
+        else if (subtreeParent->left == leftBpNode) subtreeParent->setLeftChild(mergedBpNode);
+        else if (subtreeParent->right == leftBpNode) subtreeParent->setRightChild(mergedBpNode);
+        else { assert(false); }
+
+        assert(!leftBp->isArc && !rightBp->isArc);
+    } else {
+        // Degeneracy: more than 3 cocircular sites
+        assert(softEquals(event->pos, lastHandledEvent->pos));
 
 
-    // Create the merged node
-    auto* mergedBreakpoint = new Chain(&sweepY, leftBp->leftSite, rightBp->rightSite);
-    auto* mergedBpNode = new LinkedNode<Chain*, TreeValueFacade*>(
-        mergedBreakpoint,
-        TreeValueFacade::breakpointPtr(new VertexPair({newVoronoiVertex, nullptr}))
-    );
-    double angle = atan(perpendicularBisectorSlope(*leftBp->leftSite, *rightBp->rightSite));
-    mergedBpNode->value->breakpointEdge->angle = angle > 0 ? angle - M_PI : angle;
-    factory->offerPair(mergedBpNode->value->breakpointEdge);
-
-    // Handle linked list operations
-    assert(leftBpNode->prev->key->isArc);
-    assert(leftBpNode->prev->key->isArc);
-    mergedBpNode->linkPrev(leftBpNode->prev);
-    mergedBpNode->linkNext(rightBpNode->next);
-
-    beachLine->splay(leftBpNode);
-    beachLine->splay(rightBpNode);
-    // Delete them from the beach line
-    LinkedNode<Chain*, TreeValueFacade*>* subtreeParent;
-    // "<"
-    assert(rightBpNode->left == leftBpNode);
-    assert(leftBpNode->right == arcNode);
-    subtreeParent = rightBpNode->parent;
-    mergedBpNode->setLeftChild(leftBpNode->left);
-    mergedBpNode->setRightChild(rightBpNode->right);
-
-    // ">"
-//    assert(leftBpNode->right == rightBpNode);
-//    assert(rightBpNode->left == arcNode);
-//    subtreeParent = leftBpNode->parent;
-//    mergedBpNode->setLeftChild(leftBpNode->left);
-//    mergedBpNode->setRightChild(rightBpNode->right);
-
-    if (subtreeParent == nullptr) beachLine->root = mergedBpNode;
-    else if (subtreeParent->left == leftBpNode) subtreeParent->setLeftChild(mergedBpNode);
-    else if (subtreeParent->right == leftBpNode) subtreeParent->setRightChild(mergedBpNode);
-    else { assert(false); }
-
-    assert(!leftBp->isArc && !rightBp->isArc);
+        assert(false);
+    }
 
     // Delete affected events
     LinkedNode<Chain*, TreeValueFacade*>* prevArcNode = arcNode->prev->prev;
@@ -333,7 +342,7 @@ Event* FortuneSweeper::checkAndCreateCircleEvent(LinkedNode<Chain*, TreeValueFac
     double circleEventY = center.y - center.distanceTo(a);
 
     // Only consider this event if it is below the sweep line
-    if (circleEventY + NUMERICAL_TOLERANCE >= sweepY) {
+    if (circleEventY - NUMERICAL_TOLERANCE > sweepY) {
         printf("Triplet has circumcenter %f above the sweep line, discarding.\n", circleEventY);
         return nullptr;
     }
