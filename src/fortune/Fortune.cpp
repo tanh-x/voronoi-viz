@@ -60,6 +60,10 @@ void FortuneSweeper::handleSiteEvent(Event* event) {
     LinkedNode<Chain*, TreeValueFacade*>* arcAboveNode = beachLine->root;
     while (arcAboveNode) {
         if (arcAboveNode->key->isArc) break;
+        // Check if it exactly coincides with the arc above
+        if (softEquals(event->pos.x, arcAboveNode->key->fieldOrdering(sweepY))) {
+            assert(false);
+        }
         // Use the defined natural field ordering
         arcAboveNode = beachLine->compare(arcAboveNode->key, newArc) ? arcAboveNode->right : arcAboveNode->left;
     }
