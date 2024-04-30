@@ -33,12 +33,6 @@ void FortuneSweeper::stepNextEvent() {
 
     if (event->isSiteEvent) handleSiteEvent(event);
     else {
-        // TODO: Make this not linear time
-        for (auto &v: sites) {
-            double radius = event->circleCenter.y - event->pos.y;
-            double dist = event->circleCenter.distanceTo(v);
-            if (radius - dist > NUMERICAL_TOLERANCE) event->isInvalidated = true;
-        }
         handleCircleEvent(event);
     }
 
@@ -191,9 +185,6 @@ void FortuneSweeper::handleSiteEvent(Event* event) {
     // The new root should replace the previous arc's node
     assert(arcAboveNode->parent == leftBpNode->parent);
 
-    // Invalidate the split arc's circle event
-    if (arcAboveNode->value->circleEvent != nullptr) arcAboveNode->value->circleEvent->isInvalidated = true;
-
     delete arcAbove;
 
     // Check for potential circle eventQueue caused by these new arcs
@@ -203,7 +194,10 @@ void FortuneSweeper::handleSiteEvent(Event* event) {
 }
 
 void FortuneSweeper::handleCircleEvent(Event* event) {
-    if (event->isInvalidated) return;
+    if (event->isInvalidated) {
+        printf("Event has already been invalidated, exiting\n");
+        return;
+    }
 
     // Get arc node corresponding to the circle event
     assert(!event->isSiteEvent);
@@ -216,7 +210,7 @@ void FortuneSweeper::handleCircleEvent(Event* event) {
     assert(arcNode->prev != nullptr);
     assert(arcNode->next != nullptr);
 
-    printf("Handling circle event for arc %s\n", arc->toString());
+    printf("Handling circle event for %s\n", arc->toString());
 
     bool cocircular = softEquals(event->circleCenter, lastHandledEvent->circleCenter);
 
@@ -285,7 +279,7 @@ void FortuneSweeper::handleCircleEvent(Event* event) {
         // Degeneracy: more than 3 cocircular sites
         assert(softEquals(event->pos, lastHandledEvent->pos));
 
-
+        return;
         assert(false);
     }
 
@@ -335,11 +329,10 @@ Event* FortuneSweeper::checkAndCreateCircleEvent(LinkedNode<Chain*, TreeValueFac
     }
 
     // Calculate the center of the circle through a, b, and c
-
     Vec2 center = computeCircleCenter(a, b, c);
     if (center.isInfinite) return nullptr;
-
-    double circleEventY = center.y - center.distanceTo(a);
+    double radius = center.distanceTo(a);
+    double circleEventY = center.y - radius;
 
     // Only consider this event if it is below the sweep line
     if (circleEventY - NUMERICAL_TOLERANCE > sweepY) {
@@ -347,8 +340,22 @@ Event* FortuneSweeper::checkAndCreateCircleEvent(LinkedNode<Chain*, TreeValueFac
         return nullptr;
     }
 
+    // Check if the arc itself already has a circle event
+    Event* prevCircleEvent = arcNode->value->circleEvent;
+    if (prevCircleEvent != nullptr) {
+        printf("Arc has previous circle event that resolves at (%f, %f)\n", prevCircleEvent->x(),
+               prevCircleEvent->y());
+        assert(!prevCircleEvent->isSiteEvent);
+        if (prevCircleEvent->y() > circleEventY) return nullptr;
+        else prevCircleEvent->isInvalidated = true;
+    }
+
     // Two-way reference between the node and the event
     auto* circleEvent = new Event({center.x, circleEventY}, center, arcNode);
+    for (auto &v: sites) {
+        double dist = center.distanceTo(v);
+        if (radius - dist > NUMERICAL_TOLERANCE) return nullptr;
+    }
     arcNode->value->circleEvent = circleEvent;
 
     // Return it to compare with the other one
@@ -373,7 +380,7 @@ void FortuneSweeper::offerCircleEventPair(Event* circEvent1, Event* circEvent2) 
     if (addEvent1) {
         assert(circEvent1 != nullptr);
         eventQueue->add(circEvent1);
-        printf("Added circle event for arc %s, resolves at %s\n",
+        printf("Added circle event for %s, resolves at %s\n",
                circEvent1->arcNode->key->toString(),
                circEvent1->pos.toString()
         );
@@ -381,7 +388,7 @@ void FortuneSweeper::offerCircleEventPair(Event* circEvent1, Event* circEvent2) 
     if (addEvent2) {
         assert(circEvent2 != nullptr);
         eventQueue->add(circEvent2);
-        printf("Added circle event for arc %s, resolves at %s\n",
+        printf("Added circle event for %s, resolves at %s\n",
                circEvent2->arcNode->key->toString(),
                circEvent2->pos.toString()
         );

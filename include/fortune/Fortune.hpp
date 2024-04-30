@@ -29,7 +29,7 @@ private:
     LinkedSplayTree<Chain*, TreeValueFacade*, ChainComparator>* beachLine;
     DCELFactory* factory;
 
-    Event* lastHandledEvent;
+    Event* lastHandledEvent {nullptr};
 
     void handleSiteEvent(Event* event);
 
