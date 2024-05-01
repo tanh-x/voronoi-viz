@@ -46,7 +46,7 @@ void VertexPair::offerVertex(Vertex* vertex) {
 }
 
 const char* HalfEdge::toString() const {
-    static char result[64];
+    char* result = new char[64];
     sprintf(result, "e%d, %d", origin->id, dest->id);
     return result;
 }

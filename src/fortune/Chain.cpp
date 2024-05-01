@@ -19,7 +19,7 @@ double Chain::fieldOrdering(double t) const {
 }
 
 const char* Chain::toString() const {
-    static char result[64];  // %d can only be <11 bytes
+    char* result = new char[64];  // %d can only be <11 bytes
 
     if (isArc) sprintf(result, "Arc[%d]", focus->identifier);
     else sprintf(result, "BP[%d,%d]", leftSite->identifier, rightSite->identifier);

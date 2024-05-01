@@ -39,7 +39,7 @@ Vec2 Vec2::normalized() const {
 }
 
 const char* Vec2::toString() const {
-    static char result[64];  // %d can only be <11 bytes
+    char* result = new char[64];  // %d can only be <11 bytes
 
     if (identifier == VEC2_NO_IDENTIFIER) sprintf(result, "(%f, %f)", x, y);
     else sprintf(result, "%d=(%f, %f)", identifier, x, y);

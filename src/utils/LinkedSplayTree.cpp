@@ -70,9 +70,9 @@ void vertexTreeToStringRecursive(LinkedNode<Vertex*, const char*>* node, int dep
         return;
     }
     oss << node->key->toString() << "->" << node->value << std::endl;
-    if (node->left == nullptr && node->right == nullptr) return;
-    vertexTreeToStringRecursive(node->left, depth + 1, oss);
-    vertexTreeToStringRecursive(node->right, depth + 1, oss);
+    if (node->leftChild == nullptr && node->rightChild == nullptr) return;
+    vertexTreeToStringRecursive(node->leftChild, depth + 1, oss);
+    vertexTreeToStringRecursive(node->rightChild, depth + 1, oss);
 }
 
 std::string vertexTreeToString(LinkedSplayTree<Vertex*, const char*, VertexTestComparator> tree) {

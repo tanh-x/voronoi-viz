@@ -67,7 +67,8 @@ void FortuneSweeper::handleSiteEvent(Event* event) {
             return;
         }
         // Use the defined natural field ordering
-        arcAboveNode = beachLine->compare(arcAboveNode->key, newArc) ? arcAboveNode->right : arcAboveNode->left;
+        arcAboveNode = beachLine->compare(arcAboveNode->key, newArc) ? arcAboveNode->rightChild
+                                                                     : arcAboveNode->leftChild;
     }
 
     // If no arc is found directly above, it means this is the first site
@@ -145,9 +146,9 @@ void FortuneSweeper::handleSiteEvent(Event* event) {
         rightArcNode = new LinkedNode<Chain*, TreeValueFacade*>(rightArc, TreeValueFacade::arcPtr(nullptr));
 
         // Set up the subtree structure
-        assert(leftBpNode->left == nullptr);
-        assert(rightBpNode->left == nullptr);
-        assert(rightBpNode->right == nullptr);
+        assert(leftBpNode->leftChild == nullptr);
+        assert(rightBpNode->leftChild == nullptr);
+        assert(rightBpNode->rightChild == nullptr);
         leftBpNode->setLeftChild(leftArcNode);
         rightBpNode->setLeftChild(newArcNode);
         rightBpNode->setRightChild(rightArcNode);
@@ -166,7 +167,7 @@ void FortuneSweeper::handleSiteEvent(Event* event) {
         assert(arcAboveSameLevelDegen);
 
         // Set up the subtree structure
-        assert(leftBpNode->left == nullptr);
+        assert(leftBpNode->leftChild == nullptr);
         // Create three new nodes corresponding to the three arcs
         bool newIsLeft = event->pos.x < arcAbove->focus->x;
         leftArcNode = new LinkedNode<Chain*, TreeValueFacade*>(
@@ -205,89 +206,195 @@ void FortuneSweeper::handleCircleEvent(Event* event) {
         return;
     }
 
-    // Get arc node corresponding to the circle event
+    // Sanity checks
     assert(!event->isSiteEvent);
 
     LinkedNode<Chain*, TreeValueFacade*>* arcNode = event->arcNode;
     assert(arcNode != nullptr);
 
+    // Get arc node corresponding to the circle event
     Chain* arc = arcNode->key;
+
+    // More sanity checks
     assert(arc->isArc);
     assert(arcNode->prev != nullptr);
     assert(arcNode->next != nullptr);
 
     printf("Handling circle event for %s\n", arc->toString());
 
-    bool cocircular = softEquals(event->circleCenter, lastHandledEvent->circleCenter);
+    // Temporarily holders for left and right breakpoints, preparing for "expansion" in the next while loop
+    LinkedNode<Chain*, TreeValueFacade*>* leftBpNode = arcNode->prev;
+    LinkedNode<Chain*, TreeValueFacade*>* rightBpNode = arcNode->next;
+    printf("Checking possible cocircular events\n");
 
-    if (!cocircular) {  // Standard case
-        // Add the center of the circle as a new Voronoi vertex
-        if (event->circleCenter.isInfinite) return;
-        auto* newVoronoiVertex = new Vertex(factory->numVertices() + 1, event->circleCenter);
-        factory->offerVertex(newVoronoiVertex);
+    // Grab every circle event that also occurs here
+    // Only break when we've gathered every "cocircular event"
+    // They are contiguous in the heap, because the comparator puts all site events before circular events
+    // if they have the same x and y coordinates (within a small numerical tolerance)
+    bool cocircular = false;  // For assertions only
+    while (true) {
+        printf(
+            "Left BP: %s. Right BP: %s. Checking next event...\n",
+            leftBpNode->key->toString(), rightBpNode->key->toString()
+        );
 
-        // Connect breakpoints' edges to it
-        LinkedNode<Chain*, TreeValueFacade*>* leftBpNode = arcNode->prev;
-        LinkedNode<Chain*, TreeValueFacade*>* rightBpNode = arcNode->next;
-        assert(leftBpNode != nullptr);
-        assert(rightBpNode != nullptr);
-        leftBpNode->value->breakpointEdge->offerVertex(newVoronoiVertex);
-        rightBpNode->value->breakpointEdge->offerVertex(newVoronoiVertex);
+        // Check if this is the last event in the queue
+        if (eventQueue->empty()) break;
 
-        // Then, we need kill the breakpoints and connect the disappearing arc's neighbors in the beach line
-        // First, get the nodes to be dissolved and merged
-        Chain* leftBp = leftBpNode->key;
-        Chain* rightBp = rightBpNode->key;
+        // Get the next event without pulling it out of the heap
+        Event* nextEvent = eventQueue->peek();
+
+        // Check if its a circle event
+        if (nextEvent->isSiteEvent) break;
+
+        // Check if it occurs at the same coordinates
+        assert(nextEvent->y() <= event->y());  // No tolerance in this assertion
+        if (!softEquals(nextEvent->pos, event->pos)) break;
+
+        // If so, we found a cocircular event
+        cocircular = true;
+
+        // Then, the circle center should also occur at the same spot
+        assert(softEquals(nextEvent->circleCenter, event->circleCenter));
+
+        // Extract it from the heap
+        Event* polledEvent = eventQueue->poll();
+        assert(polledEvent == nextEvent);
+
+        // Get its left and right breakpoints
+        LinkedNode<Chain*, TreeValueFacade*>* nextEventLeftBpNode = nextEvent->arcNode->prev;
+        LinkedNode<Chain*, TreeValueFacade*>* nextEventRightBpNode = nextEvent->arcNode->next;
+
+        if (beachLine->compare(nextEventLeftBpNode->key, leftBpNode->key)) {
+            leftBpNode = nextEventLeftBpNode;
+        }
+
+        if (beachLine->compare(rightBpNode->key, nextEventRightBpNode->key)) {
+            rightBpNode = nextEventRightBpNode;
+        }
+    }
+    assert(leftBpNode != nullptr);
+    assert(rightBpNode != nullptr);
+    assert(leftBpNode != rightBpNode);
+    printf("No further cocircular events found, moving on to gathering vanishing arcs...\n");
+
+    // Get the left and right breakpoints bounding merge
+    Chain* leftBp = leftBpNode->key;
+    Chain* rightBp = rightBpNode->key;
+
+    // Sanity checks
+    if (cocircular) {
+        assert(leftBpNode->next->next != rightBpNode);
+    } else {
+        assert(leftBpNode->next->next == rightBpNode);
         assert(leftBp->rightSite == arc->focus);
         assert(rightBp->leftSite == arc->focus);
-
-        // Create the merged node
-        auto* mergedBreakpoint = new Chain(&sweepY, leftBp->leftSite, rightBp->rightSite);
-        auto* mergedBpNode = new LinkedNode<Chain*, TreeValueFacade*>(
-            mergedBreakpoint,
-            TreeValueFacade::breakpointPtr(new VertexPair({newVoronoiVertex, nullptr}))
-        );
-        double angle = atan(perpendicularBisectorSlope(*leftBp->leftSite, *rightBp->rightSite));
-        mergedBpNode->value->breakpointEdge->angle = angle > 0 ? angle - M_PI : angle;
-        factory->offerPair(mergedBpNode->value->breakpointEdge);
-
-        // Handle linked list operations
-        assert(leftBpNode->prev->key->isArc);
-        assert(leftBpNode->prev->key->isArc);
-        mergedBpNode->linkPrev(leftBpNode->prev);
-        mergedBpNode->linkNext(rightBpNode->next);
-
-        beachLine->splay(leftBpNode);
-        beachLine->splay(rightBpNode);
-        // Delete them from the beach line
-        LinkedNode<Chain*, TreeValueFacade*>* subtreeParent;
-        // "<"
-        assert(rightBpNode->left == leftBpNode);
-        assert(leftBpNode->right == arcNode);
-        subtreeParent = rightBpNode->parent;
-        mergedBpNode->setLeftChild(leftBpNode->left);
-        mergedBpNode->setRightChild(rightBpNode->right);
-
-        // ">"
-        //    assert(leftBpNode->right == rightBpNode);
-        //    assert(rightBpNode->left == arcNode);
-        //    subtreeParent = leftBpNode->parent;
-        //    mergedBpNode->setLeftChild(leftBpNode->left);
-        //    mergedBpNode->setRightChild(rightBpNode->right);
-
-        if (subtreeParent == nullptr) beachLine->root = mergedBpNode;
-        else if (subtreeParent->left == leftBpNode) subtreeParent->setLeftChild(mergedBpNode);
-        else if (subtreeParent->right == leftBpNode) subtreeParent->setRightChild(mergedBpNode);
-        else { assert(false); }
-
-        assert(!leftBp->isArc && !rightBp->isArc);
-    } else {
-        // Degeneracy: more than 3 cocircular sites
-        assert(softEquals(event->pos, lastHandledEvent->pos));
-
-        return;
-        assert(false);
     }
+
+    // Get all vanishing chains, from left to right
+    std::vector<LinkedNode<Chain*, TreeValueFacade*>*> vanishingArcNodes;
+    std::vector<LinkedNode<Chain*, TreeValueFacade*>*> vanishingBpNodes;
+    // Start the scan
+    LinkedNode<Chain*, TreeValueFacade*>* node = leftBpNode;
+    vanishingBpNodes.push_back(leftBpNode);
+    while (node != rightBpNode) {
+        // Node currently has a Chain of a breakpoint as its key
+        assert(!node->key->isArc);
+
+        // The next arc will disappear after the circle event
+        node = node->next;
+        assert(node->key->isArc);
+        vanishingArcNodes.push_back(node);
+
+        // It is not possible for the next node to be nullptr, as it must not be the rightmost arc,
+        // as otherwise we forgot to escape the loop when we should've
+        assert(node->next != nullptr);
+
+        // Get the right-side breakpoint
+        node = node->next;
+        assert(!node->key->isArc);
+
+        // This breakpoint will be vanishing after the event (or merged if its the right breakpoint)
+        vanishingBpNodes.push_back(node);
+    }
+
+    // Quick chain type checks
+    for (auto &an: vanishingArcNodes) assert(an->key->isArc);
+    for (auto &bn: vanishingBpNodes) assert(!bn->key->isArc);
+    // Check for cocircularity
+    int numVanishingArcs = static_cast<int>(vanishingArcNodes.size());
+    int numMergingBreakpoints = static_cast<int>(vanishingBpNodes.size());
+    assert((!cocircular && numMergingBreakpoints == 2) || (cocircular && numMergingBreakpoints >= 3));
+    assert((!cocircular && numVanishingArcs == 1) || (cocircular && numVanishingArcs >= 2));
+    // Furthermore, the first and last element are leftBpNode and rightBpNode
+    assert(vanishingBpNodes[0] == leftBpNode);
+    assert(vanishingBpNodes[numMergingBreakpoints - 1] == rightBpNode);
+
+    // Add the center of the circle as a new Voronoi vertex
+    if (event->circleCenter.isInfinite) return;
+    auto* newVoronoiVertex = new Vertex(factory->numVertices() + 1, event->circleCenter);
+    factory->offerVertex(newVoronoiVertex);
+
+    // Connect every merging breakpoints' edges to it
+    for (auto &bn: vanishingBpNodes) {
+        VertexPair* breakpointEdge = bn->value->breakpointEdge;
+        breakpointEdge->offerVertex(newVoronoiVertex);
+    }
+
+    // Then, we need kill the breakpoints and connect the disappearing arc's neighbors in the beach line
+
+    // First, create the merged node
+    auto* mergedBreakpoint = new Chain(&sweepY, leftBp->leftSite, rightBp->rightSite);
+    auto* mergedBpNode = new LinkedNode<Chain*, TreeValueFacade*>(
+        mergedBreakpoint,
+        TreeValueFacade::breakpointPtr(new VertexPair({newVoronoiVertex, nullptr}))
+    );
+    double angle = atan(perpendicularBisectorSlope(*leftBp->leftSite, *rightBp->rightSite));
+    mergedBpNode->value->breakpointEdge->angle = angle > 0 ? angle - M_PI : angle;
+    factory->offerPair(mergedBpNode->value->breakpointEdge);
+
+    // Handle linked list operations for the new merged breakpoint node
+    assert(leftBpNode->prev->key->isArc);
+    assert(leftBpNode->prev->key->isArc);
+    mergedBpNode->linkPrev(leftBpNode->prev);
+    mergedBpNode->linkNext(rightBpNode->next);
+
+    // Delete every node that DOESN'T belong to one of the two bounding breakpoints
+    // Start with leaves
+    for (auto &an: vanishingArcNodes) {
+        assert(an->leftChild == nullptr && an->rightChild == nullptr);
+        beachLine->removeNode(an, false);
+    }
+    // Delete every breakpoint that DOESN't belong to one of the two bounding breakpoints
+    for (int i = 1; i <= numMergingBreakpoints - 2; i++) {
+        auto bn = vanishingBpNodes[i];
+        beachLine->removeNode(bn, false);
+    }
+
+    beachLine->splay(leftBpNode);
+    beachLine->splay(rightBpNode);
+    // Delete them from the beach line
+    LinkedNode<Chain*, TreeValueFacade*>* subtreeParent;
+    // "<" (when not circular)
+    assert(rightBpNode->leftChild == leftBpNode);
+    assert(leftBpNode->rightChild == nullptr);
+    subtreeParent = rightBpNode->parent;
+    mergedBpNode->setLeftChild(leftBpNode->leftChild);
+    mergedBpNode->setRightChild(rightBpNode->rightChild);
+
+    // ">"
+    //    assert(leftBpNode->right == rightBpNode);
+    //    assert(rightBpNode->left == arcNode);
+    //    subtreeParent = leftBpNode->parent;
+    //    mergedBpNode->setLeftChild(leftBpNode->left);
+    //    mergedBpNode->setRightChild(rightBpNode->right);
+
+    if (subtreeParent == nullptr) beachLine->root = mergedBpNode;
+    else if (subtreeParent->leftChild == leftBpNode) subtreeParent->setLeftChild(mergedBpNode);
+    else if (subtreeParent->rightChild == leftBpNode) subtreeParent->setRightChild(mergedBpNode);
+    else { assert(false); }
+
+    assert(!leftBp->isArc && !rightBp->isArc);
 
     // Delete affected events
     LinkedNode<Chain*, TreeValueFacade*>* prevArcNode = arcNode->prev->prev;
@@ -306,8 +413,8 @@ void FortuneSweeper::handleCircleEvent(Event* event) {
     offerCircleEventPair(circEvent1, circEvent2);
 
     // Clean up the removed arc
-    delete arc;
-    delete arcNode;
+//    delete arc;
+//    delete arcNode;
 }
 
 Event* FortuneSweeper::checkAndCreateCircleEvent(LinkedNode<Chain*, TreeValueFacade*>* arcNode) const {
@@ -341,7 +448,7 @@ Event* FortuneSweeper::checkAndCreateCircleEvent(LinkedNode<Chain*, TreeValueFac
     double circleEventY = center.y - radius;
 
     // Only consider this event if it is below the sweep line
-    if (circleEventY - NUMERICAL_TOLERANCE > sweepY) {
+    if (circleEventY + NUMERICAL_TOLERANCE > sweepY) {
         printf("Triplet has circumcenter %f above the sweep line, discarding.\n", circleEventY);
         return nullptr;
     }
@@ -415,7 +522,7 @@ void FortuneSweeper::printBeachLine() {
 void FortuneSweeper::beachLineToString(LinkedNode<Chain*, TreeValueFacade*>* node, int depth) {
     for (int i = 0; i < depth; i++) printf("|\t");
     if (node == nullptr) {
-        printf("--");
+        printf("--\n");
         return;
     }
 
@@ -426,7 +533,7 @@ void FortuneSweeper::beachLineToString(LinkedNode<Chain*, TreeValueFacade*>* nod
         node->next ? node->next->key->toString() : "--"
     );
 
-    if (node->left == nullptr && node->right == nullptr) return;
-    beachLineToString(node->left, depth + 1);
-    beachLineToString(node->right, depth + 1);
+    if (node->leftChild == nullptr && node->rightChild == nullptr) return;
+    beachLineToString(node->leftChild, depth + 1);
+    beachLineToString(node->rightChild, depth + 1);
 }

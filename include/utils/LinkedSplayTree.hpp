@@ -15,8 +15,8 @@ public:
     K key;
     V value;
 
-    LinkedNode<K, V>* left {nullptr};
-    LinkedNode<K, V>* right {nullptr};
+    LinkedNode<K, V>* leftChild {nullptr};
+    LinkedNode<K, V>* rightChild {nullptr};
     LinkedNode<K, V>* parent {nullptr};
     LinkedNode<K, V>* prev {nullptr};
     LinkedNode<K, V>* next {nullptr};
@@ -84,27 +84,27 @@ void LinkedNode<K, V>::dissolveLinks() {
 
 template<typename K, typename V>
 void LinkedNode<K, V>::setLeftChild(LinkedNode<K, V>* child) {
-    this->left = child;
+    this->leftChild = child;
     if (child) child->parent = this;
 }
 
 template<typename K, typename V>
 void LinkedNode<K, V>::setRightChild(LinkedNode<K, V>* child) {
-    this->right = child;
+    this->rightChild = child;
     if (child) child->parent = this;
 }
 
 template<typename K, typename V>
 LinkedNode<K, V>* LinkedNode<K, V>::rightmost() {
     LinkedNode<K, V>* node = this;
-    while (node->right) node = node->right;
+    while (node->rightChild) node = node->rightChild;
     return node;
 }
 
 template<typename K, typename V>
 LinkedNode<K, V>* LinkedNode<K, V>::leftmost() {
     LinkedNode<K, V>* node = this;
-    while (node->left) node = node->left;
+    while (node->leftChild) node = node->leftChild;
     return node;
 }
 
@@ -160,42 +160,42 @@ void LinkedSplayTree<K, V, Comparator>::toStringRecursive(LinkedNode<K, V>* node
         return;
     }
     oss << node->key << "->" << node->value << std::endl;
-    if (node->left == nullptr && node->right == nullptr) return;
-    toStringRecursive(node->left, depth + 1, oss);
-    toStringRecursive(node->right, depth + 1, oss);
+    if (node->leftChild == nullptr && node->rightChild == nullptr) return;
+    toStringRecursive(node->leftChild, depth + 1, oss);
+    toStringRecursive(node->rightChild, depth + 1, oss);
 }
 
 
 template<typename K, typename V, typename Comparator>
 void LinkedSplayTree<K, V, Comparator>::rotateLeft(LinkedNode<K, V>* node, LinkedNode<K, V>* rootParent) {
-    LinkedNode<K, V>* y = node->right;
+    LinkedNode<K, V>* y = node->rightChild;
     if (y) {
-        node->right = y->left;
-        if (y->left) y->left->parent = node;
+        node->rightChild = y->leftChild;
+        if (y->leftChild) y->leftChild->parent = node;
         y->parent = node->parent;
     }
     if (node->parent == rootParent && rootParent == nullptr) root = y;
-    else if (node == node->parent->left) node->parent->left = y;
-    else node->parent->right = y;
-    if (y) y->left = node;
+    else if (node == node->parent->leftChild) node->parent->leftChild = y;
+    else node->parent->rightChild = y;
+    if (y) y->leftChild = node;
     node->parent = y;
 }
 
 
 template<typename K, typename V, typename Comparator>
 void LinkedSplayTree<K, V, Comparator>::rotateRight(LinkedNode<K, V>* node, LinkedNode<K, V>* rootParent) {
-    LinkedNode<K, V>* leftChild = node->left;
+    LinkedNode<K, V>* leftChild = node->leftChild;
 
     if (leftChild) {
-        node->left = leftChild->right;
-        if (leftChild->right) leftChild->right->parent = node;
+        node->leftChild = leftChild->rightChild;
+        if (leftChild->rightChild) leftChild->rightChild->parent = node;
         leftChild->parent = node->parent;
     }
 
     if (node->parent == rootParent && rootParent == nullptr) root = leftChild;
-    else if (node == node->parent->left) node->parent->left = leftChild;
-    else node->parent->right = leftChild;
-    if (leftChild) leftChild->right = node;
+    else if (node == node->parent->leftChild) node->parent->leftChild = leftChild;
+    else node->parent->rightChild = leftChild;
+    if (leftChild) leftChild->rightChild = node;
     node->parent = leftChild;
 }
 
@@ -204,7 +204,7 @@ template<typename K, typename V, typename Comparator>
 void LinkedSplayTree<K, V, Comparator>::splay(LinkedNode<K, V>* node, LinkedNode<K, V>* rootParent) {
     if (node == nullptr) return;
     while (node->parent != rootParent) {
-        bool parentLeft = node->parent->left == node;
+        bool parentLeft = node->parent->leftChild == node;
 
         // If parent is root, directly rotate to the root
         if (node->parent->parent == rootParent) {
@@ -213,7 +213,7 @@ void LinkedSplayTree<K, V, Comparator>::splay(LinkedNode<K, V>* node, LinkedNode
             continue;
         }
 
-        bool grandparentLeft = node->parent->parent->left == node->parent;
+        bool grandparentLeft = node->parent->parent->leftChild == node->parent;
 
         // Check for each zig/zag
         if (parentLeft && grandparentLeft) {
@@ -245,9 +245,9 @@ LinkedNode<K, V>* LinkedSplayTree<K, V, Comparator>::add(K key, V value, bool do
     while (x) {
         y = x;
         if (compare(key, x->key)) {
-            x = x->left;
+            x = x->leftChild;
         } else {
-            x = x->right;
+            x = x->rightChild;
         }
     }
 
@@ -255,10 +255,10 @@ LinkedNode<K, V>* LinkedSplayTree<K, V, Comparator>::add(K key, V value, bool do
     if (!y) {
         root = newNode;
     } else if (compare(newNode->key, y->key)) {
-        y->left = newNode;  // Tree handling
+        y->leftChild = newNode;  // Tree handling
         newNode->wedgeBefore(y);  // Linked list handling
     } else {
-        y->right = newNode;  // Tree handling
+        y->rightChild = newNode;  // Tree handling
         newNode->wedgeAfter(y);  // Linked list handling
     }
 
@@ -280,7 +280,7 @@ LinkedNode<K, V>* LinkedSplayTree<K, V, Comparator>::search(K key) const {
     LinkedNode<K, V>* node = root;
     while (node) {
         if (node->key == key) return node;
-        node = compare(node->key, key) ? node->right : node->left;
+        node = compare(node->key, key) ? node->rightChild : node->leftChild;
     }
     return nullptr;
 }
@@ -288,8 +288,10 @@ LinkedNode<K, V>* LinkedSplayTree<K, V, Comparator>::search(K key) const {
 
 template<typename K, typename V, typename Comparator>
 void LinkedSplayTree<K, V, Comparator>::replace(LinkedNode<K, V>* x, LinkedNode<K, V>* y) {
-    if (x == root) root = y;
-    else if (x == x->parent->left) x->parent->setLeftChild(y);
+    if (x == root) {
+        root = y;
+        if (y != nullptr) y->parent = nullptr;
+    } else if (x == x->parent->leftChild) x->parent->setLeftChild(y);
     else x->parent->setRightChild(y);
 }
 
@@ -318,15 +320,15 @@ void LinkedSplayTree<K, V, Comparator>::removeNode(LinkedNode<K, V>* node, bool 
     node->dissolveLinks();
 
     LinkedNode<K, V>* newRoot;
-    if (!node->left) newRoot = node->right;
-    else if (!node->right) newRoot = node->left;
-    else newRoot = join(node->left, node->right);
+    if (!node->leftChild) newRoot = node->rightChild;
+    else if (!node->rightChild) newRoot = node->leftChild;
+    else newRoot = join(node->leftChild, node->rightChild);
 
     replace(node, newRoot);
     if (doSplay) splay(node->parent);
 
-    node->left = nullptr;
-    node->right = nullptr;
+    node->leftChild = nullptr;
+    node->rightChild = nullptr;
 }
 
 
