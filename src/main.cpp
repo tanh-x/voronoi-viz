@@ -63,14 +63,14 @@ int main(int argc, char* argv[]) {
 
 
     // TODO: DEBUGGING ONLY -------------
-    std::cout << "\n\nDEBUGGING: Generated python mpl syntax:\n```\n\n" << std::endl;
+    std::cout << "\n\nDEBUGGING: Generated python mpl syntax:\n```\n" << std::endl;
     std::cout << "sites = np.array([" << std::endl;
     for (auto s: sites) {
         std::cout << "\t(" << std::to_string(s.x) << ", " << std::to_string(s.y) << ")," << std::endl;
     }
     std::cout << "])\n\n# Vertex list\nverts = np.array([" << std::endl;
     for (auto v: dcel->vertices) {
-        std::cout << '\t' << v->pos.toString() << "," << std::endl;
+        std::cout << '\t' << v->pos.toString() << "," << (v->isBoundary ? "\t// boundary" : "") << std::endl;
     }
     std::cout << "])\n\n# Edge list\nv1 = np.array([" << std::endl;
     for (auto e: dcel->halfEdges) {
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
         if (dest == nullptr || e->origin == nullptr) std::cout << "# ";
         std::cout << (dest == nullptr ? "(0, 0)" : dest->pos.toString()) << "," << std::endl;
     }
-    std::cout << "])\n" << std::endl;
+    std::cout << "])\n\n```" << std::endl;
     // ----------------------
 
 
@@ -94,6 +94,7 @@ int main(int argc, char* argv[]) {
     Renderer renderer = Renderer(720, 720);
 
     renderer.initVertexObjects(dcel);
+    renderer.initSiteVertexObjects(sites);
     renderer.startRender();  // Blocking call
     renderer.terminate();
 

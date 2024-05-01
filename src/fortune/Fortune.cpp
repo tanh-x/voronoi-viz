@@ -267,7 +267,7 @@ void FortuneSweeper::handleCircleEvent(Event* event) {
         vanishingArcNodes.push_back(leftMerger);
 
         printf(
-            "Left-side: Found cocircular site at %s, whose arc is %s.",
+            "Left-side: Found cocircular site at %s, whose arc is %s.\n",
             leftMerger->key->focus->toString(), leftMerger->key->toString()
         );
 
@@ -292,7 +292,7 @@ void FortuneSweeper::handleCircleEvent(Event* event) {
         vanishingBpNodes.push_back(rightMerger->prev);
         vanishingArcNodes.push_back(rightMerger);
         printf(
-            "Right-side: Found cocircular site at %s, whose arc is %s.",
+            "Right-side: Found cocircular site at %s, whose arc is %s.\n",
             rightMerger->key->focus->toString(), rightMerger->key->toString()
         );
 

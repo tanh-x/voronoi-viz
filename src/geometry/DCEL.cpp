@@ -12,8 +12,7 @@ Vertex* DCEL::insertVertex(int id, Vec2 position) {
     auto* v = new Vertex(id, position);
 //    v->pos.x = std::clamp(v->pos.x, bottomLeftBounds.x, topRightBounds.x);
 //    v->pos.y = std::clamp(v->pos.y, bottomLeftBounds.y, topRightBounds.y);
-    vertices.push_back(v);
-    return v;
+    return insert(v);
 }
 
 HalfEdge* DCEL::insertEdge(Vertex* v1, Vertex* v2) {
@@ -44,6 +43,15 @@ double DCEL::getCenteredX(double x) const {
 
 double DCEL::getCenteredY(double y) const {
     return (y - centroid.y) / majorAxis;
+}
+
+Vertex* DCEL::insertVertex(Vec2 position) {
+    return insertVertex(-1, position);
+}
+
+Vertex* DCEL::insert(Vertex* vertex) {
+    vertices.push_back(vertex);
+    return vertex;
 }
 
 struct VertexPairComparator {
@@ -83,7 +91,6 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
     }
 
 
-
     // Equalize axes
     double width = topRight.x - bottomLeft.x;
     double height = topRight.y - bottomLeft.y;
@@ -99,20 +106,20 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
     bottomLeft = bottomLeft - padding;
 
     // Add in the bounding box
-    Vertex* bl = dcel->insertVertex(1, {bottomLeft.x, bottomLeft.y});
-    Vertex* br = dcel->insertVertex(2, {topRight.x, bottomLeft.y});
-    Vertex* tr = dcel->insertVertex(3, {topRight.x, topRight.y});
-    Vertex* tl = dcel->insertVertex(4, {bottomLeft.x, topRight.y});
-    dcel->insertEdge(bl, br);
-    dcel->insertEdge(br, tr);
-    dcel->insertEdge(tr, tl);
-    dcel->insertEdge(tl, bl);
+    dcel->insertVertex(1, {bottomLeft.x, bottomLeft.y})->isBoundary = true;
+    dcel->insertVertex(2, {topRight.x, bottomLeft.y})->isBoundary = true;
+    dcel->insertVertex(3, {topRight.x, topRight.y})->isBoundary = true;
+    dcel->insertVertex(4, {bottomLeft.x, topRight.y})->isBoundary = true;
+//    dcel->insertEdge(bl, br);
+//    dcel->insertEdge(br, tr);
+//    dcel->insertEdge(tr, tl);
+//    dcel->insertEdge(tl, bl);
 
     dcel->topRightBounds.x = topRight.x;
     dcel->topRightBounds.y = topRight.y;
     dcel->bottomLeftBounds.x = bottomLeft.x;
     dcel->bottomLeftBounds.y = bottomLeft.y;
-    dcel->majorAxis = (majorAxis * (1 + 2 * BOUNDING_BOX_PADDING)) * 0.6;
+    dcel->majorAxis = (majorAxis * (1 + 2 * BOUNDING_BOX_PADDING)) * 0.55;
     dcel->centroid = centroid;
 
     for (auto &p: vertexPairs) {
@@ -120,9 +127,6 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
 
         assert(p->angle != QUIET_NAN);
         assert(p->v1 != nullptr);
-
-        double t = majorAxis;
-        Vec2 ds = Vec2(t * cos(p->angle), t * sin(p->angle));
 
         if (vertices.find(p->v1) == vertices.end()) {
             // Vert 1 is a site event origin
@@ -133,11 +137,13 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
                     // Vertical unbounded line
                     assert(softEquals(std::abs(p->angle), M_PI / 2));
                     p->v1->pos.y = topRight.y;
-                    p->v2 = dcel->insertVertex(-1, {p->v1->x(), bottomLeft.y});
+                    p->v2 = dcel->insertVertex({p->v1->x(), bottomLeft.y});
                 } else {
                     // Vert 1 is a site event origin, and is a full unbounded line
-                    p->v1 = dcel->insertVertex(-1, p->v1->pos - ds);
-                    p->v2 = dcel->insertVertex(-1, p->v1->pos + ds);
+                    Vec2 new1 = rayIntersectBox(p->v1->pos, p->angle + M_PI, bottomLeft, topRight);
+                    Vec2 new2 = rayIntersectBox(p->v1->pos, p->angle, bottomLeft, topRight);
+                    p->v1 = dcel->insert(Vertex::boundary(new1));
+                    p->v2 = dcel->insert(Vertex::boundary(new2));
                 }
             } else {
                 // Vert 1 is a site event origin, vert 2 is a voronoi vertex
@@ -151,12 +157,17 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
                     p->v1->pos.isInfinite = p->v2->y() == INFINITY;
                 }
 
-                if (p->v1->x() < p->v2->x()) ds = ds * -1;
-                p->v1 = dcel->insertVertex(-1, p->v2->pos + ds);
+                if (p->v1->x() >= p->v2->x()) {
+                    Vec2 boxIntersect = rayIntersectBox(p->v2->pos, p->angle, bottomLeft, topRight);
+                    p->v1 = dcel->insert(Vertex::boundary(boxIntersect));
+                } else {
+                    Vec2 boxIntersect = rayIntersectBox(p->v2->pos, p->angle + M_PI, bottomLeft, topRight);
+                    p->v1 = dcel->insert(Vertex::boundary(boxIntersect));
+                }
             }
         } else if (p->v2 == nullptr) {
             // Vert 1 is a voronoi vertex, but is unbounded
-            p->v2 = dcel->insertVertex(-1, p->v1->pos + ds);
+            p->v2 = dcel->insert(Vertex::boundary(rayIntersectBox(p->v1->pos, p->angle, bottomLeft, topRight)));
         } else {
             // Vert 1 is a voronoi vertex, and vert 2 is non null
             // so vert 2 can't be a site event origin, and thus is another voronoi vertex

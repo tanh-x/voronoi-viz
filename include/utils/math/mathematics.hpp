@@ -3,7 +3,7 @@
 
 #include <stdexcept>
 #include <limits>
-#include "utils/math/Vec2.hpp"
+#include "Vec2.hpp"
 
 #define NUMERICAL_TOLERANCE 1e-7
 
@@ -29,7 +29,7 @@ double pointDirectrixIntersectionX(
 
 double perpendicularBisectorSlope(const Vec2 &leftSite, const Vec2 &rightSite);
 
-bool softEquals(double x, double y);
+bool softEquals(double x, double y, double tolerance = NUMERICAL_TOLERANCE);
 
 bool softEquals(Vec2 v1, Vec2 v2);
 
@@ -44,5 +44,11 @@ std::array<float, 16> orthographicProjection(
     Vec2 topRight,
     float near, float far
 );
+
+double findBoundingIntersection(Vec2 pos, double angle, Vec2 bottomLeft, Vec2 topRight);
+
+
+
+Vec2 rayIntersectBox(Vec2 pos, double angle, Vec2 bottomLeft, Vec2 topRight);
 
 #endif //VORONOI_VIZ_MATHEMATICS_HPP

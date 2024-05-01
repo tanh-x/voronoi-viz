@@ -44,6 +44,8 @@ public:
 
 private:
     Vertex* insertVertex(int id, Vec2 position);
+    Vertex* insertVertex(Vec2 position);
+    Vertex* insert(Vertex* vertex);
 
     HalfEdge* insertEdge(Vertex* v1, Vertex* v2);
 };

@@ -23,7 +23,14 @@ public:
         pos(v),
         incidentEdge(nullptr) {};
 
+    explicit Vertex(Vec2 v) :
+        id(-1),
+        pos(v),
+        incidentEdge(nullptr) {};
+
     [[nodiscard]] std::string toString() const;
+
+    static Vertex* boundary(Vec2 v);
 };
 
 #endif //VORONOI_VIZ_VERTEX_HPP

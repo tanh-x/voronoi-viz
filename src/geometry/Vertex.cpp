@@ -11,3 +11,9 @@ double Vertex::y() const {
 std::string Vertex::toString() const {
     return "v" + std::to_string(id);
 }
+
+Vertex* Vertex::boundary(Vec2 v) {
+    Vertex* result = new Vertex(v);
+    result->isBoundary = true;
+    return result;
+}

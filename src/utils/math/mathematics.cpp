@@ -72,7 +72,7 @@ double perpendicularBisectorSlope(const Vec2 &leftSite, const Vec2 &rightSite) {
     else return dy / dx;
 }
 
-bool softEquals(double x, double y) {
+bool softEquals(double x, double y, double tolerance) {
     return std::abs(x - y) < NUMERICAL_TOLERANCE;
 }
 
@@ -88,19 +88,109 @@ std::array<float, 16> orthographicProjection(
 ) {
     std::array<float, 16> mat = {0};
 
-    auto left = static_cast<float>(bottomLeft.x);
-    auto right = static_cast<float>(topRight.x);
-    auto bottom = static_cast<float>(bottomLeft.y);
-    auto top = static_cast<float>(topRight.y);
+    mat[0] = 1;
+    mat[5] = 1;
+    mat[10] = 1;
+    mat[15] = 1;
 
-    mat[0] = 2.0f / (right - left);
-    mat[5] = 2.0f / (top - bottom);
-    mat[10] = -2.0f / (far - near);
-    mat[12] = -(right + left) / (right - left);
-    mat[13] = -(top + bottom) / (top - bottom);
-    mat[14] = -(far + near) / (far - near);
-    mat[15] = 1.0f;
+//    auto left = static_cast<float>(bottomLeft.x);
+//    auto right = static_cast<float>(topRight.x);
+//    auto bottom = static_cast<float>(bottomLeft.y);
+//    auto top = static_cast<float>(topRight.y);
+//
+//    mat[0] = 2.0f / (right - left);
+//    mat[5] = 2.0f / (top - bottom);
+//    mat[10] = -2.0f / (far - near);
+//    mat[12] = -(right + left) / (right - left);
+//    mat[13] = -(top + bottom) / (top - bottom);
+//    mat[14] = -(far + near) / (far - near);
+//    mat[15] = 1.0f;
 
     return mat;
 }
+
+double findBoundingIntersection(Vec2 pos, double angle, Vec2 bottomLeft, Vec2 topRight) {
+    Vec2 dir = {cos(angle), sin(angle)};
+    double minimum = INFINITY;
+
+    // Check each side of the bounding box
+    double candidates[4];
+    double minX = bottomLeft.x;
+    double maxX = topRight.x;
+    double minY = bottomLeft.y;
+    double maxY = topRight.y;
+
+    if (!softEquals(dir.x, 0, 1e-10)) {
+        candidates[0] = (minX - pos.x) / dir.x; // Left edge
+        candidates[1] = (maxX - pos.x) / dir.x; // Right edge
+    }
+
+    if (!softEquals(dir.y, 0, 1e-10)) {
+        candidates[2] = (minY - pos.y) / dir.y; // Bottom edge
+        candidates[3] = (maxY - pos.y) / dir.y; // Top edge
+    }
+
+    for (double t : candidates) {
+        double ix = pos.x + t * dir.x;
+        double iy = pos.y + t * dir.y;
+
+        if (ix >= minX && ix <= maxX && iy >= minY && iy <= maxY) {
+            if (t > 0 && t < minimum) minimum = t;
+        }
+    }
+
+    return minimum;
+}
+
+Vec2 rayIntersectBox(Vec2 pos, double angle, Vec2 bottomLeft, Vec2 topRight) {
+    double cosTheta = cos(angle);
+    double sinTheta = sin(angle);
+
+    std::vector<Vec2> intersections = {};
+
+    // Check vertical boundaries
+    if (cosTheta != 0) {
+        double t1 = (bottomLeft.x - pos.x) / cosTheta;
+        double y1 = pos.y + t1 * sinTheta;
+        if (t1 >= 0 && y1 >= bottomLeft.y && y1 <= topRight.y) {
+            intersections.emplace_back(bottomLeft.x, y1);
+        }
+
+        double t2 = (topRight.x - pos.x) / cosTheta;
+        double y2 = pos.y + t2 * sinTheta;
+        if (t2 >= 0 && y2 >= bottomLeft.y && y2 <= topRight.y) {
+            intersections.emplace_back(topRight.x, y2);
+        }
+    }
+
+    // Check horizontal boundaries
+    if (sinTheta != 0) {
+        double t3 = (bottomLeft.y - pos.y) / sinTheta;
+        double x3 = pos.x + t3 * cosTheta;
+        if (t3 >= 0 && x3 >= bottomLeft.x && x3 <= topRight.x) {
+            intersections.emplace_back(x3, bottomLeft.y);
+        }
+
+        double t4 = (topRight.y - pos.y) / sinTheta;
+        double x4 = pos.x + t4 * cosTheta;
+        if (t4 >= 0 && x4 >= bottomLeft.x && x4 <= topRight.x) {
+            intersections.emplace_back(x4, topRight.y);
+        }
+    }
+
+    // Find the closest intersection point
+    Vec2 closest = intersections[0];
+    double minT = std::hypot(intersections[0].x - pos.x, intersections[0].y - pos.y);
+
+    for (Vec2 &interxn : intersections) {
+        double dist = std::hypot(interxn.x - pos.x, interxn.y - pos.y);
+        if (dist < minT) {
+            closest = interxn;
+            minT = dist;
+        }
+    }
+
+    return closest;
+}
+
 

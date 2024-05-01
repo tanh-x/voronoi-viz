@@ -11,6 +11,8 @@ public:
 
     void initVertexObjects(DCEL* geometry);
 
+    void initSiteVertexObjects(const std::vector<Vec2> &sites);
+
     void startRender();
 
     void terminate();
@@ -34,8 +36,16 @@ private:
     // Main geometry
     GLuint VAO {};
     GLuint VBO {};
+    GLuint pointsVAO {};
+    GLuint pointsVBO {};
+    GLuint sitesVAO {};
+    GLuint sitesVBO {};
     std::vector<float> edgeEndpoints {};
+    std::vector<float> pointVertices {};
+    std::vector<float> siteVertices {};
     bool vertexObjsInitialized = false;
+
+    // Sites vertices
 
     // Other elements of the view port
     GLuint gridVAO {};
