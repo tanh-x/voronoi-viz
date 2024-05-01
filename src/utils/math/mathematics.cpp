@@ -47,6 +47,8 @@ double pointDirectrixIntersectionX(const Vec2 &leftParabolaFocus, const Vec2 &ri
     double d = directrix;
 
     if (softEquals(b, v)) return (a + u) * 0.5;
+    if (softEquals(v, d)) return u;
+    if (softEquals(b, d)) return a;
 
     double discriminant = (d - b) * (d - v) * (sq(a - u) + sq(b - v));
     if (discriminant < NUMERICAL_TOLERANCE) return QUIET_NAN;

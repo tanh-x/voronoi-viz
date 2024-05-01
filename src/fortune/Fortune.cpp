@@ -104,7 +104,6 @@ void FortuneSweeper::handleSiteEvent(Event* event) {
     // Create new arcs from the split of the old arc
     auto* leftArc = new BeachChain(&sweepY, arcAbove->focus);
     auto* rightArc = new BeachChain(&sweepY, arcAbove->focus);
-    // TODO: For degeneracy, use the left and right arc instead of the same arc.
 
     // Create two new breakpoints
     auto* leftBreakpoint = new BeachChain(&sweepY, leftArc->focus, newArc->focus);
