@@ -1,9 +1,9 @@
 #include <cassert>
 #include <cmath>
-#include "fortune/Chain.hpp"
+#include "fortune/BeachChain.hpp"
 
 
-double Chain::fieldOrdering(double t) const {
+double BeachChain::fieldOrdering(double t) const {
     if (isArc) {
         assert(focus);
         assert(leftSite == nullptr);
@@ -18,7 +18,7 @@ double Chain::fieldOrdering(double t) const {
     }
 }
 
-const char* Chain::toString() const {
+const char* BeachChain::toString() const {
     char* result = new char[64];  // %d can only be <11 bytes
 
     if (isArc) sprintf(result, "Arc[%d]", focus->identifier);
@@ -36,7 +36,7 @@ TreeValueFacade* TreeValueFacade::arcPtr(Event* ptr) {
     return new TreeValueFacade({nullptr, ptr});
 }
 
-bool ChainComparator::operator()(Chain* a, Chain* b) const {
+bool ChainComparator::operator()(BeachChain* a, BeachChain* b) const {
     assert(a->sweepY == b->sweepY);
     double orderingParameter = *a->sweepY;
     return a->fieldOrdering(orderingParameter) < b->fieldOrdering(orderingParameter);

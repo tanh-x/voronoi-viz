@@ -148,7 +148,7 @@ void Renderer::createGrid(std::vector<float> &vertices, float gridSize, int numL
         vertices.push_back(pos);
         vertices.push_back(0);
         vertices.push_back(pos);
-        vertices.push_back(gapSize + (i * 0.005f));
+    vertices.push_back(gapSize + (i * 0.005f));
 
         // Horizontal lines
         vertices.push_back(0);

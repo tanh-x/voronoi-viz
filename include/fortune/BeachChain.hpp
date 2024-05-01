@@ -1,5 +1,5 @@
-#ifndef VORONOI_VIZ_CHAIN_HPP
-#define VORONOI_VIZ_CHAIN_HPP
+#ifndef VORONOI_VIZ_BEACHCHAIN_HPP
+#define VORONOI_VIZ_BEACHCHAIN_HPP
 
 #include "geometry/HalfEdge.hpp"
 #include "utils/math/Vec2.hpp"
@@ -7,19 +7,19 @@
 
 class Event;
 
-class Chain {
+class BeachChain {
 public:
     // Arcs are leaf nodes, breakpoints lie between two arcs, and are internal nodes
     bool isArc;
 
     double* sweepY {nullptr};
 
-    Chain(double* sweepY, Vec2* focus)
+    BeachChain(double* sweepY, Vec2* focus)
         : isArc(true),
           sweepY(sweepY),
           focus(focus) {};
 
-    Chain(double* sweepY, Vec2* left, Vec2* right)
+    BeachChain(double* sweepY, Vec2* left, Vec2* right)
         : isArc(false),
           sweepY(sweepY),
           leftSite(left),
@@ -49,8 +49,8 @@ public:
 };
 
 struct ChainComparator {
-    bool operator()(Chain* a, Chain* b) const;
+    bool operator()(BeachChain* a, BeachChain* b) const;
 };
 
 
-#endif //VORONOI_VIZ_CHAIN_HPP
+#endif //VORONOI_VIZ_BEACHCHAIN_HPP

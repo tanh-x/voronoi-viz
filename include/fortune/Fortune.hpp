@@ -6,7 +6,7 @@
 #include "utils/PriorityQueue.hpp"
 #include "utils/LinkedSplayTree.hpp"
 #include "Event.hpp"
-#include "Chain.hpp"
+#include "BeachChain.hpp"
 #include "geometry/DCEL.hpp"
 
 class FortuneSweeper {
@@ -26,7 +26,7 @@ public:
 
 private:
     PriorityQueue<Event*, EventComparator>* eventQueue;
-    LinkedSplayTree<Chain*, TreeValueFacade*, ChainComparator>* beachLine;
+    LinkedSplayTree<BeachChain*, TreeValueFacade*, ChainComparator>* beachLine;
     DCELFactory* factory;
 
     Event* lastHandledEvent {nullptr};
@@ -35,13 +35,13 @@ private:
 
     void handleCircleEvent(Event* event);
 
-    Event* checkAndCreateCircleEvent(LinkedNode<Chain*, TreeValueFacade*>* arcNode) const;
+    Event* checkAndCreateCircleEvent(LinkedNode<BeachChain*, TreeValueFacade*>* arcNode) const;
 
     void offerCircleEventPair(Event* circEvent1, Event* circEvent2);
 
     void printBeachLine();
 
-    void beachLineToString(LinkedNode<Chain*, TreeValueFacade*>* node, int depth);
+    void beachLineToString(LinkedNode<BeachChain*, TreeValueFacade*>* node, int depth);
 
     void handleSiteAtBottomDegen(Event* event);
 

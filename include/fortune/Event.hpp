@@ -2,10 +2,10 @@
 #ifndef VORONOI_VIZ_EVENT_HPP
 #define VORONOI_VIZ_EVENT_HPP
 
-#include "Chain.hpp"
+#include "BeachChain.hpp"
 #include "utils/LinkedSplayTree.hpp"
 
-class Chain;
+class BeachChain;
 
 class TreeValueFacade;
 
@@ -13,7 +13,7 @@ class Event {
 public:
     Vec2 pos;
     bool isSiteEvent;
-    LinkedNode<Chain*, TreeValueFacade*>* arcNode;
+    LinkedNode<BeachChain*, TreeValueFacade*>* arcNode;
 
     Vec2 circleCenter {Vec2::infinity()};
 
@@ -24,7 +24,7 @@ public:
           isSiteEvent(true),
           arcNode {nullptr} {}
 
-    Event(Vec2 circleBottom, Vec2 center, LinkedNode<Chain*, TreeValueFacade*>* arcNode) :
+    Event(Vec2 circleBottom, Vec2 center, LinkedNode<BeachChain*, TreeValueFacade*>* arcNode) :
         pos(circleBottom),
         isSiteEvent(false),
         arcNode(arcNode),

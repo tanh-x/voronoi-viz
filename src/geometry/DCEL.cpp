@@ -82,10 +82,18 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
         topRight.y = std::max(topRight.y, v->y());
     }
 
-    // Add some padding
+
+
+    // Equalize axes
     double width = topRight.x - bottomLeft.x;
     double height = topRight.y - bottomLeft.y;
     double majorAxis = std::max(width, height);
+
+    Vec2 centroid = {(topRight.x + bottomLeft.x) * 0.5, (topRight.y + bottomLeft.y) * 0.5};
+    topRight = centroid + Vec2(majorAxis, majorAxis) * 0.5;
+    bottomLeft = centroid - Vec2(majorAxis, majorAxis) * 0.5;
+
+    // Add some padding
     Vec2 padding = Vec2(majorAxis, majorAxis) * BOUNDING_BOX_PADDING;
     topRight = topRight + padding;
     bottomLeft = bottomLeft - padding;
@@ -105,8 +113,7 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
     dcel->bottomLeftBounds.x = bottomLeft.x;
     dcel->bottomLeftBounds.y = bottomLeft.y;
     dcel->majorAxis = (majorAxis * (1 + 2 * BOUNDING_BOX_PADDING)) * 0.6;
-    dcel->centroid.x = (topRight.x + bottomLeft.x) * 0.5;
-    dcel->centroid.y = (topRight.y + bottomLeft.y) * 0.5;
+    dcel->centroid = centroid;
 
     for (auto &p: vertexPairs) {
         if (p->v1 == p->v2) continue;
@@ -121,11 +128,17 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
             // Vert 1 is a site event origin
             if (p->v2 == nullptr) {
                 // Both vertices are unbounded
-//                assert(p->v1->y() == INFINITY);
 
-                // Vert 1 is a site event origin, and is a full unbounded line
-                p->v1 = dcel->insertVertex(-1, p->v1->pos - ds);
-                p->v2 = dcel->insertVertex(-1, p->v1->pos + ds);
+                if (p->v1->y() == INFINITY) {
+                    // Vertical unbounded line
+                    assert(softEquals(std::abs(p->angle), M_PI / 2));
+                    p->v1->pos.y = topRight.y;
+                    p->v2 = dcel->insertVertex(-1, {p->v1->x(), bottomLeft.y});
+                } else {
+                    // Vert 1 is a site event origin, and is a full unbounded line
+                    p->v1 = dcel->insertVertex(-1, p->v1->pos - ds);
+                    p->v2 = dcel->insertVertex(-1, p->v1->pos + ds);
+                }
             } else {
                 // Vert 1 is a site event origin, vert 2 is a voronoi vertex
                 assert(p->v2 != nullptr);

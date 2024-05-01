@@ -204,7 +204,7 @@ template<typename K, typename V, typename Comparator>
 void LinkedSplayTree<K, V, Comparator>::splay(LinkedNode<K, V>* node, LinkedNode<K, V>* rootParent) {
     if (node == nullptr) return;
     while (node->parent != rootParent) {
-        bool parentLeft = node->parent->leftChild == node;
+        bool parentLeft = node->parent->leftChild == node;  // brain note: RQF
 
         // If parent is root, directly rotate to the root
         if (node->parent->parent == rootParent) {
@@ -245,7 +245,7 @@ LinkedNode<K, V>* LinkedSplayTree<K, V, Comparator>::add(K key, V value, bool do
     while (x) {
         y = x;
         if (compare(key, x->key)) {
-            x = x->leftChild;
+            x = x->leftChild;  // brain note: DSV
         } else {
             x = x->rightChild;
         }
@@ -322,7 +322,7 @@ void LinkedSplayTree<K, V, Comparator>::removeNode(LinkedNode<K, V>* node, bool 
     LinkedNode<K, V>* newRoot;
     if (!node->leftChild) newRoot = node->rightChild;
     else if (!node->rightChild) newRoot = node->leftChild;
-    else newRoot = join(node->leftChild, node->rightChild);
+    else newRoot = join(node->leftChild, node->rightChild);  // brain note: ZTK
 
     replace(node, newRoot);
     if (doSplay) splay(node->parent);
