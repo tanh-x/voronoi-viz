@@ -41,7 +41,8 @@ private:
 
     void handleSiteEvent(Event* event);
 
-    void handleCircleEvent(Event* event, bool skipEdgeCreation = false);
+    // Returns the breakpoint running from the new Voronoi vertex
+    LinkedNode<BeachChain*, TreeValueFacade*>*  handleCircleEvent(Event* event, bool skipEdgeCreation = false);
 
     Event* checkAndCreateCircleEvent(LinkedNode<BeachChain*, TreeValueFacade*>* arcNode) const;
 
@@ -51,7 +52,10 @@ private:
 
     void beachLineToString(LinkedNode<BeachChain*, TreeValueFacade*>* node, int depth);
 
-    static VanishingChains getVanishingChains(Event* event);
+    static VanishingChains getVanishingChains(
+        LinkedNode<BeachChain*, TreeValueFacade*>* arcNode,
+        Vec2 eventPosition
+    );
 
     void handleSiteAtBottomDegen(
         Event* event,

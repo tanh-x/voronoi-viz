@@ -61,14 +61,23 @@ void FortuneSweeper::handleSiteEvent(Event* event) {
         // Check if it exactly coincides with the arc above
         if (softEquals(event->pos.x, arcAboveNode->key->fieldOrdering(sweepY))) {
             assert(!arcAboveNode->key->isArc);
-
-            // Also if there's a circle event here as well
-            if (!eventQueue->empty()
-                && !eventQueue->peek()->isSiteEvent
-                && softEquals(eventQueue->peek()->pos, event->pos)) {
-                printf("WARNING: Site below breakpoint, coinciding with a (co)circular event!.\n");
+            if (eventQueue->empty()
+                || eventQueue->peek()->isSiteEvent
+                || !softEquals(eventQueue->peek()->pos, event->pos)) {
+                handleSiteAtBottomDegen(event, newArc, arcAboveNode);
+                return;
             }
-            handleSiteAtBottomDegen(event, newArc, arcAboveNode);
+
+            printf("\nWARNING: Site below breakpoint, coinciding with a (co)circular event!.\n"
+                   "Resolving that circle event first...\n\n");
+            auto* merged = handleCircleEvent(eventQueue->poll());
+
+            if (merged == nullptr) {
+                printf("Unhandled special case, exiting");
+                exit(1);
+            }
+
+            handleSiteAtBottomDegen(event, newArc, merged);
             return;
         }
         // Use the defined natural field ordering
@@ -205,10 +214,10 @@ void FortuneSweeper::handleSiteEvent(Event* event) {
     offerCircleEventPair(circEvent1, circEvent2);
 }
 
-void FortuneSweeper::handleCircleEvent(Event* event, bool skipEdgeCreation) {
+LinkedNode<BeachChain*, TreeValueFacade*>* FortuneSweeper::handleCircleEvent(Event* event, bool skipEdgeCreation) {
     if (event->isInvalidated) {
         printf("Event has already been invalidated, exiting\n");
-        return;
+        return nullptr;
     }
 
     // Sanity checks
@@ -232,7 +241,7 @@ void FortuneSweeper::handleCircleEvent(Event* event, bool skipEdgeCreation) {
     // leftMerger and rightMerger, referred to as "merging" breakpoints. Every other breakpoint involved in
     // the event that will disappear are also called "vanishing breakpoints".
 
-    VanishingChains vanishing = getVanishingChains(event);
+    VanishingChains vanishing = getVanishingChains(arcNode, event->pos);
 
     LinkedNode<BeachChain*, TreeValueFacade*>* leftMerger = vanishing.leftMerger;
     LinkedNode<BeachChain*, TreeValueFacade*>* rightMerger = vanishing.rightMerger;
@@ -242,7 +251,7 @@ void FortuneSweeper::handleCircleEvent(Event* event, bool skipEdgeCreation) {
     // Everything should be fine here
 
     // Add the center of the circle as a new Voronoi vertex
-    if (event->circleCenter.isInfinite) return;
+    if (event->circleCenter.isInfinite) return nullptr;
     auto* newVoronoiVertex = new Vertex(factory->numVertices() + 1, event->circleCenter);
     factory->offerVertex(newVoronoiVertex);
 
@@ -272,6 +281,7 @@ void FortuneSweeper::handleCircleEvent(Event* event, bool skipEdgeCreation) {
         }
     }
 
+    LinkedNode<BeachChain*, TreeValueFacade*>* mergedBpNode = nullptr;
     if (!skipEdgeCreation) {
         // Get the left and right breakpoints bounding merge
         BeachChain* leftBp = leftMerger->key;
@@ -281,7 +291,7 @@ void FortuneSweeper::handleCircleEvent(Event* event, bool skipEdgeCreation) {
 
         // First, create the merged node
         auto* mergedBreakpoint = new BeachChain(&sweepY, leftBp->leftSite, rightBp->rightSite);
-        auto* mergedBpNode = new LinkedNode<BeachChain*, TreeValueFacade*>(
+        mergedBpNode = new LinkedNode<BeachChain*, TreeValueFacade*>(
             mergedBreakpoint,
             TreeValueFacade::breakpointPtr(new VertexPair({newVoronoiVertex, nullptr}))
         );
@@ -349,6 +359,8 @@ void FortuneSweeper::handleCircleEvent(Event* event, bool skipEdgeCreation) {
     Event* circEvent2 = checkAndCreateCircleEvent(nextArcNode);
 
     offerCircleEventPair(circEvent1, circEvent2);
+
+    return mergedBpNode;
 
     // Clean up the removed arc
 //    delete arc;
@@ -428,10 +440,16 @@ void FortuneSweeper::handleSiteAtBottomDegen(
     );
 
     // Check for (co)circular events also happening here
+//    VanishingChains vanishing = getVanishingChains(bpAboveNode->next, event->pos);  // Either prev or next is fine
+//
+//    LinkedNode<BeachChain*, TreeValueFacade*>* leftMerger = vanishing.leftMerger;
+//    LinkedNode<BeachChain*, TreeValueFacade*>* rightMerger = vanishing.rightMerger;
+//    std::vector<LinkedNode<BeachChain*, TreeValueFacade*>*> vanishingArcNodes = *vanishing.vanishingArcNodes;
+//    std::vector<LinkedNode<BeachChain*, TreeValueFacade*>*> vanishingBpNodes = *vanishing.vanishingBpNodes;
 
     // Pointer to the two adjacent arcs
-    auto* leftArcNode = bpAboveNode->prev;
-    auto* rightArcNode = bpAboveNode->next;
+    LinkedNode<BeachChain*, TreeValueFacade*>* leftArcNode = bpAboveNode->prev;
+    LinkedNode<BeachChain*, TreeValueFacade*>* rightArcNode = bpAboveNode->next;
 
     // First, bring the breakpoint node to the root
     beachLine->splay(bpAboveNode);
@@ -574,10 +592,8 @@ void FortuneSweeper::beachLineToString(LinkedNode<BeachChain*, TreeValueFacade*>
     beachLineToString(node->rightChild, depth + 1);
 }
 
-VanishingChains FortuneSweeper::getVanishingChains(Event* event) {
-    assert(!event->isSiteEvent);
-
-    LinkedNode<BeachChain*, TreeValueFacade*>* arcNode = event->arcNode;
+VanishingChains
+FortuneSweeper::getVanishingChains(LinkedNode<BeachChain*, TreeValueFacade*>* arcNode, Vec2 eventPosition) {
     BeachChain* arc = arcNode->key;
     bool cocircular = false;
 
@@ -605,7 +621,7 @@ VanishingChains FortuneSweeper::getVanishingChains(Event* event) {
 
         // Check if it has a circle event, and the event coincides with this one
         if (leftMerger->value->circleEvent == nullptr ||
-            !softEquals(leftMerger->value->circleEvent->pos, event->pos)) {
+            !softEquals(leftMerger->value->circleEvent->pos, eventPosition)) {
             // If not, then we have traversed the arc left of the merging breakpoint
             // Go back to the last breakpoint to get the left-side merging breakpoint
             leftMerger = leftMerger->next;
@@ -635,7 +651,7 @@ VanishingChains FortuneSweeper::getVanishingChains(Event* event) {
         assert(rightMerger->key->isArc);
 
         if (rightMerger->value->circleEvent == nullptr ||
-            !softEquals(rightMerger->value->circleEvent->pos, event->pos)) {
+            !softEquals(rightMerger->value->circleEvent->pos, eventPosition)) {
             rightMerger = rightMerger->prev;
             break;
         }
