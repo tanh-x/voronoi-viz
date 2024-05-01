@@ -43,9 +43,9 @@ public:
     VertexPair* breakpointEdge = nullptr;
     Event* circleEvent = nullptr;
 
-    static TreeValueFacade* breakpointPtr(VertexPair* ptr);
+    static TreeValueFacade* breakpointPtr(VertexPair* ptr = nullptr);
 
-    static TreeValueFacade* arcPtr(Event* ptr);
+    static TreeValueFacade* arcPtr(Event* ptr = nullptr);
 };
 
 struct ChainComparator {

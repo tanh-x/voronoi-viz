@@ -9,6 +9,14 @@
 #include "BeachChain.hpp"
 #include "geometry/DCEL.hpp"
 
+typedef struct VanishingChains {
+    LinkedNode<BeachChain*, TreeValueFacade*>* leftMerger;
+    LinkedNode<BeachChain*, TreeValueFacade*>* rightMerger;
+    std::vector<LinkedNode<BeachChain*, TreeValueFacade*>*>* vanishingArcNodes;
+    std::vector<LinkedNode<BeachChain*, TreeValueFacade*>*>* vanishingBpNodes;
+    bool cocircular;
+} VanishingChains;
+
 class FortuneSweeper {
 public:
     const std::vector<Vec2> &sites;
@@ -33,7 +41,7 @@ private:
 
     void handleSiteEvent(Event* event);
 
-    void handleCircleEvent(Event* event);
+    void handleCircleEvent(Event* event, bool skipEdgeCreation = false);
 
     Event* checkAndCreateCircleEvent(LinkedNode<BeachChain*, TreeValueFacade*>* arcNode) const;
 
@@ -43,9 +51,14 @@ private:
 
     void beachLineToString(LinkedNode<BeachChain*, TreeValueFacade*>* node, int depth);
 
-    void handleSiteAtBottomDegen(Event* event);
+    static VanishingChains getVanishingChains(Event* event);
 
-
+    void handleSiteAtBottomDegen(
+        Event* event,
+        BeachChain* newArc,
+        LinkedNode<BeachChain*, TreeValueFacade*>* bpAboveNode
+    );
 };
+
 
 #endif
