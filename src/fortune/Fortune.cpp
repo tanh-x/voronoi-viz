@@ -363,8 +363,8 @@ LinkedNode<BeachChain*, TreeValueFacade*>* FortuneSweeper::handleCircleEvent(Eve
     }
 
     // Delete affected events
-    LinkedNode<BeachChain*, TreeValueFacade*>* prevArcNode = arcNode->prev->prev;
-    LinkedNode<BeachChain*, TreeValueFacade*>* nextArcNode = arcNode->next->next;
+    LinkedNode<BeachChain*, TreeValueFacade*>* prevArcNode = leftMerger->prev;
+    LinkedNode<BeachChain*, TreeValueFacade*>* nextArcNode = rightMerger->next;
     assert(prevArcNode != nullptr);
     assert(nextArcNode != nullptr);
     Event* prevCircEvent = prevArcNode->value->circleEvent;

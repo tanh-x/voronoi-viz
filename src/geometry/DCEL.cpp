@@ -38,13 +38,13 @@ int DCEL::numFaces() const {
 }
 
 double DCEL::getCenteredX(double x) const {
-    return (x - centroid.x) / majorAxis;
-//    return x / 10.0;
+//    return (x - centroid.x) / majorAxis;
+    return x / 10.0;
 }
 
 double DCEL::getCenteredY(double y) const {
-    return (y - centroid.y) / majorAxis;
-//    return y / 10.0;
+//    return (y - centroid.y) / majorAxis;
+    return y / 10.0;
 }
 
 Vertex* DCEL::insertVertex(Vec2 position) {
