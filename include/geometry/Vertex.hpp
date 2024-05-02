@@ -9,7 +9,7 @@ class HalfEdge;
 
 class Vertex {
 public:
-    int id;
+    int label;
     Vec2 pos;
     HalfEdge* incidentEdge;
     bool isBoundary = false;
@@ -18,19 +18,19 @@ public:
 
     [[nodiscard]] double y() const;
 
-    Vertex(int id, Vec2 v) :
-        id(id),
+    Vertex(int label, Vec2 v) :
+        label(label),
         pos(v),
         incidentEdge(nullptr) {};
 
     explicit Vertex(Vec2 v) :
-        id(-1),
+        label(-1),
         pos(v),
         incidentEdge(nullptr) {};
 
     [[nodiscard]] std::string toString() const;
 
-    static Vertex* boundary(Vec2 v);
+    static Vertex* boundary(Vec2 v, int label = -1);
 };
 
 #endif //VORONOI_VIZ_VERTEX_HPP

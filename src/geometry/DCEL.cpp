@@ -2,14 +2,15 @@
 #include <set>
 #include <cassert>
 #include <cmath>
+#include <unordered_map>
 #include "geometry/DCEL.hpp"
 #include "utils/math/mathematics.hpp"
 
 // Any reasonable number (around 0.1 to 0.5), aesthetics only
 #define BOUNDING_BOX_PADDING 0.362160297
 
-Vertex* DCEL::insertVertex(int id, Vec2 position) {
-    auto* v = new Vertex(id, position);
+Vertex* DCEL::insertVertex(int label, Vec2 position) {
+    auto* v = new Vertex(label, position);
 //    v->pos.x = std::clamp(v->pos.x, bottomLeftBounds.x, topRightBounds.x);
 //    v->pos.y = std::clamp(v->pos.y, bottomLeftBounds.y, topRightBounds.y);
     return insert(v);
@@ -17,6 +18,7 @@ Vertex* DCEL::insertVertex(int id, Vec2 position) {
 
 HalfEdge* DCEL::insertEdge(Vertex* v1, Vertex* v2) {
     auto* e = new HalfEdge(v1, v2);
+    if (v1->isBoundary || v2->isBoundary) e->unbounded = true;
     halfEdges.push_back(e);
     return e;
 }
@@ -38,13 +40,13 @@ int DCEL::numFaces() const {
 }
 
 double DCEL::getCenteredX(double x) const {
-//    return (x - centroid.x) / majorAxis;
-    return x / 10.0;
+    return (x - centroid.x) / majorAxis;
+//    return x / 10.0;
 }
 
 double DCEL::getCenteredY(double y) const {
-//    return (y - centroid.y) / majorAxis;
-    return y / 10.0;
+    return (y - centroid.y) / majorAxis;
+//    return y / 10.0;
 }
 
 Vertex* DCEL::insertVertex(Vec2 position) {
@@ -56,6 +58,52 @@ Vertex* DCEL::insert(Vertex* vertex) {
     return vertex;
 }
 
+HalfEdge* DCEL::insert(HalfEdge* edge) {
+    halfEdges.push_back(edge);
+    return edge;
+}
+
+
+Face* DCEL::insert(Face* face) {
+    faces.push_back(face);
+    return face;
+}
+
+
+void DCEL::printOutput() {
+    // Print vertices
+    printf("\n");
+    for (Vertex* v: vertices) {
+        printf(
+            "%s %s %s\n",
+            v->toString().c_str(),
+            v->pos.toString(),
+            (v->incidentEdge == nullptr ? "nil" : v->incidentEdge->toString())
+        );
+    }
+
+    // Print faces
+    printf("\n");
+    for (Face* f: faces) {
+        printf("f%d %s\n", f->label, f->edge == nullptr ? "nil" : f->edge->toString());
+    }
+
+    // Print vertices
+    printf("\n");
+    for (HalfEdge* e: halfEdges) {
+        printf(
+            "%s %s %s %s %s %s\n",
+            e->toString(),
+            e->origin->toString().c_str(),
+            e->twin->toString(),
+            (e->incidentFace == nullptr ? "nil" : e->incidentFace->toString().c_str()),
+            (e->next == nullptr ? "nil" : e->next->toString()),
+            (e->prev == nullptr ? "nil" : e->prev->toString())
+        );
+    }
+}
+
+
 struct VertexPairComparator {
     bool operator()(const VertexPair* lhs, const VertexPair* rhs) const {
         // Order-independent comparison of vertex pointers
@@ -66,13 +114,21 @@ struct VertexPairComparator {
 };
 
 
+DCELFactory::DCELFactory(const std::vector<Vec2> &sites) : sites(sites) {
+    dcel = new DCEL();
+    for (auto s: sites) {
+        Face* newFace = dcel->insert(new Face(&s));
+        assert(newFace->label == s.identifier);
+        cells.insert({s.identifier, newFace});
+    }
+}
+
+
 DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
-    // Initialize the DCEL
-    auto* dcel = new DCEL();
 
     // Define the bounding box corner coordinates
-    auto bottomLeft = Vec2(DOUBLE_INFINITY, DOUBLE_INFINITY);
-    auto topRight = Vec2(-DOUBLE_INFINITY, -DOUBLE_INFINITY);
+    bottomLeft = Vec2(DOUBLE_INFINITY, DOUBLE_INFINITY);
+    topRight = Vec2(-DOUBLE_INFINITY, -DOUBLE_INFINITY);
 
     // Adjust the boundary box corners
     for (auto &s: sites) {
@@ -108,20 +164,17 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
     bottomLeft = bottomLeft - padding;
 
     // Add in the bounding box
-    dcel->insertVertex(1, {bottomLeft.x, bottomLeft.y})->isBoundary = true;
-    dcel->insertVertex(2, {topRight.x, bottomLeft.y})->isBoundary = true;
-    dcel->insertVertex(3, {topRight.x, topRight.y})->isBoundary = true;
-    dcel->insertVertex(4, {bottomLeft.x, topRight.y})->isBoundary = true;
-//    dcel->insertEdge(bl, br);
-//    dcel->insertEdge(br, tr);
-//    dcel->insertEdge(tr, tl);
-//    dcel->insertEdge(tl, bl);
+    bl = dcel->insert(Vertex::boundary({bottomLeft.x, bottomLeft.y}, 1));
+    br = dcel->insert(Vertex::boundary({topRight.x, bottomLeft.y}, 2));
+    tr = dcel->insert(Vertex::boundary({topRight.x, topRight.y}, 3));
+    tl = dcel->insert(Vertex::boundary({bottomLeft.x, topRight.y}, 4));
+    numBoundaryVertices = 4;
 
     dcel->topRightBounds.x = topRight.x;
     dcel->topRightBounds.y = topRight.y;
     dcel->bottomLeftBounds.x = bottomLeft.x;
     dcel->bottomLeftBounds.y = bottomLeft.y;
-    dcel->majorAxis = (majorAxis * (1 + 2 * BOUNDING_BOX_PADDING)) * 0.55;
+    dcel->majorAxis = (majorAxis * (1 + 2 * BOUNDING_BOX_PADDING)) * 0.5;
     dcel->centroid = centroid;
 
     for (auto &p: vertexPairs) {
@@ -142,10 +195,10 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
                     p->v2 = dcel->insertVertex({p->v1->x(), bottomLeft.y});
                 } else {
                     // Vert 1 is a site event origin, and is a full unbounded line
-                    Vec2 new1 = rayIntersectBox(p->v1->pos, p->angle + M_PI, bottomLeft, topRight);
-                    Vec2 new2 = rayIntersectBox(p->v1->pos, p->angle, bottomLeft, topRight);
-                    p->v1 = dcel->insert(Vertex::boundary(new1));
-                    p->v2 = dcel->insert(Vertex::boundary(new2));
+                    Vertex* new1 = getOrCreateBoundaryVertex(p->v1->pos, p->angle + M_PI);
+                    Vertex* new2 = getOrCreateBoundaryVertex(p->v1->pos, p->angle);
+                    p->v1 = dcel->insert(new1);
+                    p->v2 = dcel->insert(new2);
                 }
             } else {
                 // Vert 1 is a site event origin, vert 2 is a voronoi vertex
@@ -159,26 +212,47 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
                     p->v1->pos.isInfinite = p->v2->y() == INFINITY;
                 }
 
-                if (p->v1->x() >= p->v2->x()) {
-                    Vec2 boxIntersect = rayIntersectBox(p->v2->pos, p->angle, bottomLeft, topRight);
-                    p->v1 = dcel->insert(Vertex::boundary(boxIntersect));
-                } else {
-                    Vec2 boxIntersect = rayIntersectBox(p->v2->pos, p->angle + M_PI, bottomLeft, topRight);
-                    p->v1 = dcel->insert(Vertex::boundary(boxIntersect));
-                }
+                double rayAngle = p->angle;
+                if (p->v1->x() < p->v2->x()) rayAngle += M_PI;
+                p->v1 = dcel->insert(getOrCreateBoundaryVertex(p->v2->pos, rayAngle));
             }
         } else if (p->v2 == nullptr) {
             // Vert 1 is a voronoi vertex, but is unbounded
-            p->v2 = dcel->insert(Vertex::boundary(rayIntersectBox(p->v1->pos, p->angle, bottomLeft, topRight)));
+            p->v2 = dcel->insert(getOrCreateBoundaryVertex(p->v1->pos, p->angle));
         } else {
             // Vert 1 is a voronoi vertex, and vert 2 is non null
             // so vert 2 can't be a site event origin, and thus is another voronoi vertex
             assert(vertices.find(p->v2) != vertices.end());
         }
 
-        dcel->insertEdge(p->v1, p->v2);
+        HalfEdge* newHalfEdge = dcel->insertEdge(p->v1, p->v2);
+        HalfEdge* twinEdge = newHalfEdge->generateTwin();
+        dcel->insert(twinEdge);
+        newHalfEdge->bindTwins(twinEdge);
+
+        // Decide which incident face to use
+        Vec2 dir = newHalfEdge->dest->pos - newHalfEdge->origin->pos;
+        Vec2 dirA = (*p->incidentSiteA) - newHalfEdge->origin->pos;
+        Vec2 dirB = (*p->incidentSiteB) - newHalfEdge->origin->pos;
+
+        if (dir.cross(dirA) > 0) {
+            assert(dir.cross(dirB) - NUMERICAL_TOLERANCE <= 0);
+            newHalfEdge->incidentFace = cells.at(p->incidentSiteA->identifier);
+            twinEdge->incidentFace = cells.at(p->incidentSiteB->identifier);
+        } else {
+            assert(dir.cross(dirA) - NUMERICAL_TOLERANCE <= 0);
+            newHalfEdge->incidentFace = cells.at(p->incidentSiteB->identifier);
+            twinEdge->incidentFace = cells.at(p->incidentSiteA->identifier);
+        }
+        newHalfEdge->incidentFace->edge = newHalfEdge;
+        twinEdge->incidentFace->edge = newHalfEdge;
     }
 
+    printf(
+        "Pushed all preliminary vertices and edges into DCEL, with %d vertices and %d edges\n",
+        dcel->numVertices(), dcel->numHalfEdges()
+    );
+    consolidateDCEL();
     return dcel;
 }
 
@@ -203,3 +277,92 @@ int DCELFactory::numVertices() {
     return static_cast<int>(vertices.size());
 }
 
+Vertex* DCELFactory::getOrCreateBoundaryVertex(Vec2 origin, double angle) {
+    Vec2 intersect = rayIntersectBox(origin, angle, bottomLeft, topRight);
+
+    if (softEquals(intersect, bl->pos)) return bl;
+    if (softEquals(intersect, br->pos)) return br;
+    if (softEquals(intersect, tr->pos)) return tr;
+    if (softEquals(intersect, tl->pos)) return tl;
+
+    return Vertex::boundary(intersect, ++numBoundaryVertices);
+}
+
+DCEL* DCELFactory::consolidateDCEL() {
+    // Set up the incidence map
+    for (Vertex* v: dcel->vertices) {
+        auto* newSet = new std::set<HalfEdge*, HalfEdgeAngleComparator>();
+        incidenceMap.insert({v, newSet});
+    }
+
+    // Go through each edge and update the incidence map
+    consolidateEdges();
+
+    // Now, work out the next/prev relationship for each vertex
+    consolidateVertices();
+
+    // Make sure every edge has a twin, prev, and next
+//    for (HalfEdge* edge: dcel->halfEdges) {
+//        assert(edge->twin != nullptr);
+//        assert(edge->prev != nullptr);
+//        if (edge->next == nullptr) edge->next = edge->twin;
+//    }
+
+    // Finally, work on the faces
+    consolidateFaces();
+
+    return dcel;
+}
+
+void printIncidenceSet(std::set<HalfEdge*, HalfEdgeAngleComparator>* incidenceSet) {
+    for (HalfEdge* edge: *incidenceSet) {
+        printf("%s - %f (%f deg)\n", edge->toString(), edge->angle, edge->angle / M_PI * 180);
+    }
+}
+
+void DCELFactory::consolidateEdges() {
+//    std::vector<HalfEdge*> allEdges = dcel->halfEdges;
+    for (HalfEdge* fwdEdge: dcel->halfEdges) {
+        // Generate the twin edge
+//        HalfEdge* twinEdge = fwdEdge->generateTwin();
+//        fwdEdge->bindTwins(twinEdge);
+//        allEdges.push_back(twinEdge);
+
+        // Only update the origin vertices' incidence sets
+        incidenceMap.at(fwdEdge->origin)->insert(fwdEdge);
+//        incidenceMap.at(twinEdge->origin)->insert(twinEdge);
+    }
+//    dcel->halfEdges = allEdges;
+}
+
+void DCELFactory::consolidateVertices() {
+    for (Vertex* v: dcel->vertices) {
+        std::set<HalfEdge*, HalfEdgeAngleComparator>* incidenceSet = incidenceMap.at(v);
+        printf("Consolidating vertex %s\n", v->toString().c_str());
+        printIncidenceSet(incidenceSet);
+
+        // Check if there are more than 2 edges through this vertex
+        if (incidenceSet->empty()) continue;
+
+        if (incidenceSet->size() == 1) {
+            HalfEdge* edge = *incidenceSet->begin();
+            v->incidentEdge = edge;
+            edge->twin->chainNext(edge);
+            continue;
+        }
+
+        // Establish the prev/next edge relation
+        HalfEdge* edge = *incidenceSet->rbegin();
+        assert(edge != nullptr);
+        v->incidentEdge = edge;
+        for (HalfEdge* nextEdge: *incidenceSet) {
+            nextEdge->twin->chainNext(edge);
+//            edge->twin->chainNext(nextEdge);
+            edge = nextEdge;
+        }
+    }
+}
+
+void DCELFactory::consolidateFaces() {
+
+}

@@ -122,10 +122,10 @@ void priorityQueueTest8() {
     pq.add(Vertex(2, Vec2(2, 2)));
     pq.add(Vertex(3, Vec2(0, 3)));
 
-    assert(pq.peek().id == 3);
+    assert(pq.peek().label == 3);
     assert(pq.poll().pos.norm() == 3);
-    assert(pq.peek().id == 2);
+    assert(pq.peek().label == 2);
     assert(pq.poll().pos.x == 2);
-    assert(pq.peek().id == 1);
+    assert(pq.peek().label == 1);
     assert(pq.poll().pos.y == 1);
 }

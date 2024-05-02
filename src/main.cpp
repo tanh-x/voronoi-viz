@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "\nVertices:\n" << std::endl;
     for (auto v: dcel->vertices) {
-        std::cout << v->toString() << v->pos.toString() << std::endl;
+        std::cout << v->toString() << " " << v->pos.toString() << std::endl;
     }
 
     std::cout << "\nEdges:\n" << std::endl;
@@ -57,7 +57,8 @@ int main(int argc, char* argv[]) {
     for (auto e: dcel->halfEdges) {
         Vertex* origin = e->origin;
         Vertex* dest = e->dest;
-        std::cout << (origin == nullptr ? "infty" : origin->toString() + origin->pos.toString()) << "->"
+        std::cout << e->toString() << " - "
+                  << (origin == nullptr ? "infty" : origin->toString() + origin->pos.toString()) << "->"
                   << (dest == nullptr ? "infty" : dest->toString() + dest->pos.toString()) << std::endl;
     }
 
@@ -89,6 +90,8 @@ int main(int argc, char* argv[]) {
     std::cout << "])\n\n```" << std::endl;
     // ----------------------
 
+    printf("--- DCEL Output ---\n\n");
+    dcel->printOutput();
 
     // Set up renderer
     Renderer renderer = Renderer(720, 720);

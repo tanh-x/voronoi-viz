@@ -1,5 +1,5 @@
-//
-// Created by kew on 4/22/24.
-//
-
 #include "geometry/Face.hpp"
+
+std::string Face::toString() const {
+    return "f" + std::to_string(label);
+}

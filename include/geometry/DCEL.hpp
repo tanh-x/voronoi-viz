@@ -4,6 +4,8 @@
 
 #include <vector>
 #include <unordered_set>
+#include <unordered_map>
+#include <set>
 #include "Vertex.hpp"
 #include "Face.hpp"
 
@@ -42,17 +44,28 @@ public:
 
     [[nodiscard]] double getCenteredY(double y) const;
 
+    void printOutput();
+
 private:
-    Vertex* insertVertex(int id, Vec2 position);
+    Vertex* insertVertex(int label, Vec2 position);
+
     Vertex* insertVertex(Vec2 position);
+
     Vertex* insert(Vertex* vertex);
 
+    HalfEdge* insert(HalfEdge* edge);
+
+    Face* insert(Face* face);
+
     HalfEdge* insertEdge(Vertex* v1, Vertex* v2);
+
+    HalfEdge* insertEdge(Vertex* v1, Vertex* v2, double angle);
+
 };
 
 class DCELFactory {
 public:
-    DCELFactory() = default;
+    explicit DCELFactory(const std::vector<Vec2> &sites);;
 
     void offerVertex(Vertex* vertex);
 
@@ -62,9 +75,35 @@ public:
 
     DCEL* createDCEL(const std::vector<Vec2> &sites);
 
+    DCEL* consolidateDCEL();
+
 private:
+    DCEL* dcel {};
+
+    const std::vector<Vec2> &sites;
+
+    Vec2 bottomLeft = Vec2(DOUBLE_INFINITY, DOUBLE_INFINITY);
+    Vec2 topRight = Vec2(-DOUBLE_INFINITY, -DOUBLE_INFINITY);
+
+    int numBoundaryVertices = 0;
+
+    Vertex* bl = nullptr;
+    Vertex* br = nullptr;
+    Vertex* tr = nullptr;
+    Vertex* tl = nullptr;
+
     std::unordered_set<Vertex*> vertices {};
     std::unordered_set<VertexPair*> vertexPairs {};
+    std::unordered_map<Vertex*, std::set<HalfEdge*, HalfEdgeAngleComparator>*> incidenceMap {};
+    std::unordered_map<int, Face*> cells {};
+
+    Vertex* getOrCreateBoundaryVertex(Vec2 origin, double angle);
+
+    void consolidateEdges();
+
+    void consolidateVertices();
+
+    void consolidateFaces();
 };
 
 #endif //VORONOI_VIZ_DCEL_HPP

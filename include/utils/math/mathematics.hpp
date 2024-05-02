@@ -45,10 +45,10 @@ std::array<float, 16> orthographicProjection(
     float near, float far
 );
 
-double findBoundingIntersection(Vec2 pos, double angle, Vec2 bottomLeft, Vec2 topRight);
-
-
-
 Vec2 rayIntersectBox(Vec2 pos, double angle, Vec2 bottomLeft, Vec2 topRight);
+
+double normalizeRadians(double angle);
+
+double addRadians(double angle1, double angle2);
 
 #endif //VORONOI_VIZ_MATHEMATICS_HPP

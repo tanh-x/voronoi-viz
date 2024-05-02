@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <cmath>
 #include <cassert>
 #include "geometry/HalfEdge.hpp"
 #include "geometry/Vertex.hpp"
@@ -47,6 +48,36 @@ void VertexPair::offerVertex(Vertex* vertex) {
 
 const char* HalfEdge::toString() const {
     char* result = new char[64];
-    sprintf(result, "e%d, %d", origin->id, dest->id);
+    sprintf(
+        result, "e%s%d,%s%d",
+        (origin->isBoundary ? "b" : ""), origin->label,
+        (dest->isBoundary ? "b" : ""), dest->label
+    );
+
     return result;
+}
+
+HalfEdge* HalfEdge::generateTwin() const {
+    auto* result = new HalfEdge(dest, origin);  // NOLINT
+    return result;
+}
+
+void HalfEdge::bindTwins(HalfEdge* other) {
+    this->twin = other;
+    other->twin = this;
+}
+
+void HalfEdge::chainNext(HalfEdge* other) {
+    this->next = other;
+    other->prev = this;
+}
+
+void HalfEdge::chainPrev(HalfEdge* other) {
+    this->prev = other;
+    other->next = this;
+}
+
+HalfEdge::HalfEdge(Vertex* origin, Vertex* dest) : origin(origin), dest(dest) {
+    if (origin != nullptr && dest != nullptr) angle = atan2(dest->y() - origin->y(), dest->x() - origin->x());
+    else angle = QUIET_NAN;
 }

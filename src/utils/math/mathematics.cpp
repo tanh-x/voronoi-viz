@@ -111,39 +111,6 @@ std::array<float, 16> orthographicProjection(
     return mat;
 }
 
-double findBoundingIntersection(Vec2 pos, double angle, Vec2 bottomLeft, Vec2 topRight) {
-    Vec2 dir = {cos(angle), sin(angle)};
-    double minimum = INFINITY;
-
-    // Check each side of the bounding box
-    double candidates[4];
-    double minX = bottomLeft.x;
-    double maxX = topRight.x;
-    double minY = bottomLeft.y;
-    double maxY = topRight.y;
-
-    if (!softEquals(dir.x, 0, 1e-10)) {
-        candidates[0] = (minX - pos.x) / dir.x; // Left edge
-        candidates[1] = (maxX - pos.x) / dir.x; // Right edge
-    }
-
-    if (!softEquals(dir.y, 0, 1e-10)) {
-        candidates[2] = (minY - pos.y) / dir.y; // Bottom edge
-        candidates[3] = (maxY - pos.y) / dir.y; // Top edge
-    }
-
-    for (double t : candidates) {
-        double ix = pos.x + t * dir.x;
-        double iy = pos.y + t * dir.y;
-
-        if (ix >= minX && ix <= maxX && iy >= minY && iy <= maxY) {
-            if (t > 0 && t < minimum) minimum = t;
-        }
-    }
-
-    return minimum;
-}
-
 Vec2 rayIntersectBox(Vec2 pos, double angle, Vec2 bottomLeft, Vec2 topRight) {
     double cosTheta = cos(angle);
     double sinTheta = sin(angle);
@@ -193,6 +160,17 @@ Vec2 rayIntersectBox(Vec2 pos, double angle, Vec2 bottomLeft, Vec2 topRight) {
     }
 
     return closest;
+}
+
+double normalizeRadians(double angle) {
+    angle = fmod(angle + M_PI, 2 * M_PI);
+    if (angle <= 0) angle += 2 * M_PI;
+    return angle - M_PI;
+}
+
+double addRadians(double angle1, double angle2) {
+    double sum = angle1 + angle2;
+    return normalizeRadians(sum);
 }
 
 

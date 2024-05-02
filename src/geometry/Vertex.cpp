@@ -9,11 +9,11 @@ double Vertex::y() const {
 }
 
 std::string Vertex::toString() const {
-    return "v" + std::to_string(id);
+    return (isBoundary ? 'b' : 'v') + std::to_string(label);
 }
 
-Vertex* Vertex::boundary(Vec2 v) {
-    Vertex* result = new Vertex(v);
+Vertex* Vertex::boundary(Vec2 v, int label) {
+    auto* result = new Vertex(label, v);
     result->isBoundary = true;
     return result;
 }

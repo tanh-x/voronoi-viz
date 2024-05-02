@@ -7,10 +7,21 @@ class HalfEdge;
 
 class Face {
 public:
-    // Outer component
-    HalfEdge* edge;
+    int label;
 
-    Face() : edge(nullptr) {}
+    // Voronoi cell (optional)
+    Vec2* site {nullptr};
+
+    // Outer component
+    HalfEdge* edge {nullptr};
+
+    Face() : label(-1) {}
+
+    Face(HalfEdge* outerComponent, int label) : label(label), edge(outerComponent) {}
+
+    explicit Face(Vec2* site) : label(site->identifier), site(site) {}
+
+    [[nodiscard]] std::string toString() const;
 };
 
 

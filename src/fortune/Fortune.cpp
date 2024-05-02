@@ -8,7 +8,7 @@ FortuneSweeper::FortuneSweeper(const std::vector<Vec2> &sites) : sites(sites) {
     ChainComparator chainComp;
     this->eventQueue = new PriorityQueue<Event*, EventComparator>(eventComp);
     this->beachLine = new LinkedSplayTree<BeachChain*, TreeValueFacade*, ChainComparator>(chainComp);
-    this->factory = new DCELFactory();
+    this->factory = new DCELFactory(sites);
 
     // Populate the event queue with site events
     for (const Vec2 &site: sites) eventQueue->add(new Event(site));
@@ -39,6 +39,7 @@ void FortuneSweeper::stepNextEvent() {
 
 
 DCEL* FortuneSweeper::finalize() {
+    printf("Finished Fortune sweep, building DCEL...\n");
     return factory->createDCEL(sites);
 }
 
@@ -146,6 +147,8 @@ void FortuneSweeper::handleSiteEvent(Event* event) {
     auto* bpEdgeProxyOrigin = new Vertex(0, bpProxyOriginVec);
     newEdge->offerVertex(bpEdgeProxyOrigin);
     newEdge->angle = angle;
+    newEdge->incidentSiteA = arcAbove->focus;
+    newEdge->incidentSiteB = newArc->focus;
     factory->offerPair(newEdge);
 
     LinkedNode<BeachChain*, TreeValueFacade*>* leftArcNode;
@@ -206,7 +209,7 @@ void FortuneSweeper::handleSiteEvent(Event* event) {
     assert(arcAboveNode->parent == leftBpNode->parent);
 
     // Try to reduce tree depth
-//    beachLine->splay(rightBpNode);
+    beachLine->splay(rightBpNode);
 
     delete arcAbove;
 
@@ -272,6 +275,8 @@ LinkedNode<BeachChain*, TreeValueFacade*>* FortuneSweeper::handleCircleEvent(Eve
             auto* newEdge = new VertexPair();
             newEdge->offerVertex(newVoronoiVertex);
             newEdge->angle = angle > 0 ? angle - M_PI : angle;
+            newEdge->incidentSiteA = bn->key->leftSite;
+            newEdge->incidentSiteB = bn->key->rightSite;
 
             // Add it back into the value pointer
             bn->value->breakpointEdge = newEdge;
@@ -299,9 +304,9 @@ LinkedNode<BeachChain*, TreeValueFacade*>* FortuneSweeper::handleCircleEvent(Eve
         double angle = atan(perpendicularBisectorSlope(*leftBp->leftSite, *rightBp->rightSite));
 
         // Decide on which ray to take based on the orientation of the vertices
-        Vec2 L = *leftMerger->key->leftSite;
+        Vec2 L = *leftBp->leftSite;
 //        Vec2 V = newVoronoiVertex->pos;
-        Vec2 R = *rightMerger->key->rightSite;
+        Vec2 R = *rightBp->rightSite;
 
         if (L.x > R.x) {
             printf("Orientation check: This event is oriented counterclockwise\n");
@@ -310,18 +315,9 @@ LinkedNode<BeachChain*, TreeValueFacade*>* FortuneSweeper::handleCircleEvent(Eve
             printf("Orientation check: This event is oriented clockwise\n");
             mergedBpNode->value->breakpointEdge->angle = angle > 0 ? angle - M_PI : angle;
         }
-//        assert(L.x < R.x);
-//        double det = computeDeterminantTest(L, V, R);
-//        if (det >= 0) {
-//            // Clockwise, take the bottom part (pointing downwards)
-//            printf("(Orientation check: This event is oriented clockwise %f)\n", det);
-//            mergedBpNode->value->breakpointEdge->angle = angle;
-//        } else {
-//            // Counterclockwise, take the top part (pointing upwards)
-//            printf("(Orientation check: This event is oriented counterclockwise %f)\n", det);
-//            mergedBpNode->value->breakpointEdge->angle = angle;
-//        }
-//        printf("Cross product check (LR x LV): %f\n", (R - L).cross(V - L));
+
+        mergedBpNode->value->breakpointEdge->incidentSiteA = leftBp->leftSite;
+        mergedBpNode->value->breakpointEdge->incidentSiteB = rightBp->rightSite;
         factory->offerPair(mergedBpNode->value->breakpointEdge);
 
         // Handle linked list operations for the new merged breakpoint node
