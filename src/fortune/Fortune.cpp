@@ -131,7 +131,7 @@ void FortuneSweeper::handleSiteEvent(Event* event) {
         assert(rightBpNode->parent == nullptr || !rightBpNode->parent->key->isArc);
     }
 
-    // Add new edge records into the factory
+    // Add new outer records into the factory
     Vec2 bpProxyOriginVec(
         event->pos.x,
         pointDirectrixParabola(event->pos.x, *arcAbove->focus, sweepY)
@@ -269,7 +269,7 @@ LinkedNode<BeachChain*, TreeValueFacade*>* FortuneSweeper::handleCircleEvent(Eve
 
         if (breakpointEdge == nullptr) {
             // This means this breakpoint did not come from a standard site event nor a circle event,
-            // but rather a handleSiteAtBottomDegen case. We add a new edge for it here.
+            // but rather a handleSiteAtBottomDegen case. We add a new outer for it here.
             double angle = atan(perpendicularBisectorSlope(*bn->key->leftSite, *bn->key->rightSite));
 
             auto* newEdge = new VertexPair();
@@ -549,7 +549,7 @@ void FortuneSweeper::handleSiteAtBottomDegen(
 
     handleCircleEvent(circleEvent, true);
 
-    // Additionally, end the breakpoint node's edge, since we will be removing all references to it from the tree
+    // Additionally, end the breakpoint node's outer, since we will be removing all references to it from the tree
     // Retrieve the new voronoi vertex
     Vertex* newVoronoiVertex = leftBpNode->value->breakpointEdge->v1;
     assert(rightBpNode->value->breakpointEdge->v1 == newVoronoiVertex);

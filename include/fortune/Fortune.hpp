@@ -32,10 +32,10 @@ public:
 
     DCEL* finalize();
 
+    DCELFactory* factory;
 private:
     PriorityQueue<Event*, EventComparator>* eventQueue;
     LinkedSplayTree<BeachChain*, TreeValueFacade*, ChainComparator>* beachLine;
-    DCELFactory* factory;
 
     Event* lastHandledEvent {nullptr};
 

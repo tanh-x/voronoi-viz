@@ -89,7 +89,7 @@ void Renderer::initVertexObjects(DCEL* geometry) {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    // Initialize edge data
+    // Initialize outer data
     for (auto &e: geometry->halfEdges) {
         edgeEndpoints.push_back(float(dcel->getCenteredX(e->origin->pos.x)));
         edgeEndpoints.push_back(float(dcel->getCenteredY(e->origin->pos.y)));

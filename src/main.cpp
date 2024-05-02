@@ -12,7 +12,7 @@ int main(int argc, char* argv[]) {
 
     [[maybe_unused]] bool animate = false;
     [[maybe_unused]] bool delaunay = false;
-    [[maybe_unused]] float yStep = 1.0;
+    [[maybe_unused]] bool voronoi = false;
     std::vector<Vec2> sites;
 
 
@@ -22,9 +22,8 @@ int main(int argc, char* argv[]) {
             animate = true;
         } else if (strcmp(argv[i], "--delaunay") == 0) {
             delaunay = true;
-        } else if (strcmp(argv[i], "--yStep") == 0) {
-            if (i + 1 >= argc) continue;
-            yStep = std::stof(argv[++i]);
+        } else if (strcmp(argv[i], "--voronoi") == 0) {
+            voronoi = true;
         } else {
             // Assume it's a file path
             sites = parseSites(argv[i]);
@@ -64,7 +63,15 @@ int main(int argc, char* argv[]) {
 
 
     // TODO: DEBUGGING ONLY -------------
-    std::cout << "\n\nDEBUGGING: Generated python mpl syntax:\n```\n" << std::endl;
+    std::ofstream file;
+    std::streambuf* oldCoutStreamBuf;
+    if (animate) {
+        file = std::ofstream("dump");
+        oldCoutStreamBuf = std::cout.rdbuf();
+        std::cout.rdbuf(file.rdbuf());
+    } else {
+        std::cout << "\n\nDEBUGGING: Generated python mpl syntax:\n```\n" << std::endl;
+    }
     std::cout << "sites = np.array([" << std::endl;
     for (auto s: sites) {
         std::cout << "\t(" << std::to_string(s.x) << ", " << std::to_string(s.y) << ")," << std::endl;
@@ -87,19 +94,38 @@ int main(int argc, char* argv[]) {
         if (dest == nullptr || e->origin == nullptr) std::cout << "# ";
         std::cout << (dest == nullptr ? "(0, 0)" : dest->pos.toString()) << "," << std::endl;
     }
-    std::cout << "])\n\n```" << std::endl;
+    std::cout << "])\n\n" << std::endl;
+    if (animate) {
+        std::cout.rdbuf(oldCoutStreamBuf);  // Restore old std::cout buffer
+        file.close();
+    }
     // ----------------------
 
-    printf("--- DCEL Output ---\n\n");
-    dcel->printOutput();
+    printf("\n****** Voronoi diagram ******\n");
+    dcel->printOutputVoronoiStyle();
+
+    DCEL* delaunayTriangulation = algo.factory->buildDualGraph();
+
+    printf("\n****** Delaunay triangulation ******\n");
+    delaunayTriangulation->printOutputDelaunayStyle();
+
+    printf("\n\n");
+
+    if (animate) return 0;
 
     // Set up renderer
     Renderer renderer = Renderer(720, 720);
 
-    renderer.initVertexObjects(dcel);
-    renderer.initSiteVertexObjects(sites);
-    renderer.startRender();  // Blocking call
-    renderer.terminate();
-
+    if ((!voronoi && !delaunay) || voronoi) {
+        renderer.initVertexObjects(dcel);
+        renderer.initSiteVertexObjects(sites);
+        renderer.startRender();  // Blocking call
+        renderer.terminate();
+    } else if (delaunay) {
+        renderer.initVertexObjects(delaunayTriangulation);
+        renderer.initSiteVertexObjects(sites);
+        renderer.startRender();  // Blocking call
+        renderer.terminate();
+    }
     return 0;
 }

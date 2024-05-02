@@ -25,6 +25,8 @@ public:
     double majorAxis = DOUBLE_INFINITY;
     Vec2 centroid {Vec2(0, 0)};
 
+    bool consolidated = false;
+
     [[nodiscard]] int numVertices() const;
 
     [[nodiscard]] int numHalfEdges() const;
@@ -44,7 +46,9 @@ public:
 
     [[nodiscard]] double getCenteredY(double y) const;
 
-    void printOutput();
+    void printOutputVoronoiStyle();
+
+    void printOutputDelaunayStyle();
 
 private:
     Vertex* insertVertex(int label, Vec2 position);
@@ -58,9 +62,6 @@ private:
     Face* insert(Face* face);
 
     HalfEdge* insertEdge(Vertex* v1, Vertex* v2);
-
-    HalfEdge* insertEdge(Vertex* v1, Vertex* v2, double angle);
-
 };
 
 class DCELFactory {
@@ -75,7 +76,9 @@ public:
 
     DCEL* createDCEL(const std::vector<Vec2> &sites);
 
-    DCEL* consolidateDCEL();
+    static DCEL* consolidateDCEL(DCEL* geometry);
+
+    DCEL* buildDualGraph();
 
 private:
     DCEL* dcel {};
@@ -94,16 +97,12 @@ private:
 
     std::unordered_set<Vertex*> vertices {};
     std::unordered_set<VertexPair*> vertexPairs {};
-    std::unordered_map<Vertex*, std::set<HalfEdge*, HalfEdgeAngleComparator>*> incidenceMap {};
     std::unordered_map<int, Face*> cells {};
 
+    // Dual graph stuff
+    std::vector<HalfEdge*> fwdEdges;
+
     Vertex* getOrCreateBoundaryVertex(Vec2 origin, double angle);
-
-    void consolidateEdges();
-
-    void consolidateVertices();
-
-    void consolidateFaces();
 };
 
 #endif //VORONOI_VIZ_DCEL_HPP

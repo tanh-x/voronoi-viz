@@ -70,7 +70,7 @@ Face* DCEL::insert(Face* face) {
 }
 
 
-void DCEL::printOutput() {
+void DCEL::printOutputVoronoiStyle() {
     // Print vertices
     printf("\n");
     for (Vertex* v: vertices) {
@@ -85,18 +85,73 @@ void DCEL::printOutput() {
     // Print faces
     printf("\n");
     for (Face* f: faces) {
-        printf("f%d %s\n", f->label, f->edge == nullptr ? "nil" : f->edge->toString());
+        printf(
+            "c%d %s%s %s%s\n",
+            f->label,
+            f->outer == nullptr ? "" : "e",
+            f->outer == nullptr ? "nil" : f->outer->toString(),
+            f->inner == nullptr ? "" : "e",
+            f->inner == nullptr ? "nil" : f->inner->toString()
+        );
     }
 
     // Print vertices
     printf("\n");
     for (HalfEdge* e: halfEdges) {
         printf(
-            "%s %s %s %s %s %s\n",
+            "e%s %s e%s %s e%s e%s\n",
             e->toString(),
             e->origin->toString().c_str(),
             e->twin->toString(),
             (e->incidentFace == nullptr ? "nil" : e->incidentFace->toString().c_str()),
+            (e->next == nullptr ? "nil" : e->next->toString()),
+            (e->prev == nullptr ? "nil" : e->prev->toString())
+        );
+    }
+}
+
+void DCEL::printOutputDelaunayStyle() {
+    // Print vertices
+    printf("\n");
+    for (Vertex* v: vertices) {
+        printf(
+            "p%d %s %s\n",
+            v->label,
+            v->pos.toString(),
+            (v->incidentEdge == nullptr ? "nil" : v->incidentEdge->toString())
+        );
+    }
+
+    // Print faces
+    printf("\n");
+    for (Face* f: faces) {
+        if (f->unbounded) {
+            printf(
+                "uf %s %s\n",
+                f->outer == nullptr ? "nil" : f->outer->toString(),
+                f->inner == nullptr ? "nil" : f->inner->toString()
+            );
+        } else {
+            printf(
+                "t%d %s %s\n",
+                f->label,
+                f->outer == nullptr ? "nil" : f->outer->toString(),
+                f->inner == nullptr ? "nil" : f->inner->toString()
+            );
+        }
+    }
+
+    // Print vertices
+    printf("\n");
+    for (HalfEdge* e: halfEdges) {
+        printf(
+            "d%s p%d d%s %s d%s d%s\n",
+            e->toString(),
+            e->origin->label,
+            e->twin->toString(),
+            (e->incidentFace == nullptr
+             ? "nil"
+             : (e->incidentFace->unbounded ? "uf" : "t" + std::to_string(e->incidentFace->label)).c_str()),
             (e->next == nullptr ? "nil" : e->next->toString()),
             (e->prev == nullptr ? "nil" : e->prev->toString())
         );
@@ -125,7 +180,6 @@ DCELFactory::DCELFactory(const std::vector<Vec2> &sites) : sites(sites) {
 
 
 DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
-
     // Define the bounding box corner coordinates
     bottomLeft = Vec2(DOUBLE_INFINITY, DOUBLE_INFINITY);
     topRight = Vec2(-DOUBLE_INFINITY, -DOUBLE_INFINITY);
@@ -227,6 +281,7 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
 
         HalfEdge* newHalfEdge = dcel->insertEdge(p->v1, p->v2);
         HalfEdge* twinEdge = newHalfEdge->generateTwin();
+        fwdEdges.push_back(newHalfEdge);
         dcel->insert(twinEdge);
         newHalfEdge->bindTwins(twinEdge);
 
@@ -244,16 +299,18 @@ DCEL* DCELFactory::createDCEL(const std::vector<Vec2> &sites) {
             newHalfEdge->incidentFace = cells.at(p->incidentSiteB->identifier);
             twinEdge->incidentFace = cells.at(p->incidentSiteA->identifier);
         }
-        newHalfEdge->incidentFace->edge = newHalfEdge;
-        twinEdge->incidentFace->edge = newHalfEdge;
+
+        // Face relation operations
+        newHalfEdge->incidentFace->offerComponent(newHalfEdge);
+        twinEdge->incidentFace->offerComponent(twinEdge);
     }
 
     printf(
         "Pushed all preliminary vertices and edges into DCEL, with %d vertices and %d edges\n",
         dcel->numVertices(), dcel->numHalfEdges()
     );
-    consolidateDCEL();
-    return dcel;
+
+    return consolidateDCEL(dcel);
 }
 
 void DCELFactory::offerVertex(Vertex* vertex) {
@@ -288,31 +345,6 @@ Vertex* DCELFactory::getOrCreateBoundaryVertex(Vec2 origin, double angle) {
     return Vertex::boundary(intersect, ++numBoundaryVertices);
 }
 
-DCEL* DCELFactory::consolidateDCEL() {
-    // Set up the incidence map
-    for (Vertex* v: dcel->vertices) {
-        auto* newSet = new std::set<HalfEdge*, HalfEdgeAngleComparator>();
-        incidenceMap.insert({v, newSet});
-    }
-
-    // Go through each edge and update the incidence map
-    consolidateEdges();
-
-    // Now, work out the next/prev relationship for each vertex
-    consolidateVertices();
-
-    // Make sure every edge has a twin, prev, and next
-//    for (HalfEdge* edge: dcel->halfEdges) {
-//        assert(edge->twin != nullptr);
-//        assert(edge->prev != nullptr);
-//        if (edge->next == nullptr) edge->next = edge->twin;
-//    }
-
-    // Finally, work on the faces
-    consolidateFaces();
-
-    return dcel;
-}
 
 void printIncidenceSet(std::set<HalfEdge*, HalfEdgeAngleComparator>* incidenceSet) {
     for (HalfEdge* edge: *incidenceSet) {
@@ -320,26 +352,28 @@ void printIncidenceSet(std::set<HalfEdge*, HalfEdgeAngleComparator>* incidenceSe
     }
 }
 
-void DCELFactory::consolidateEdges() {
-//    std::vector<HalfEdge*> allEdges = dcel->halfEdges;
-    for (HalfEdge* fwdEdge: dcel->halfEdges) {
-        // Generate the twin edge
-//        HalfEdge* twinEdge = fwdEdge->generateTwin();
-//        fwdEdge->bindTwins(twinEdge);
-//        allEdges.push_back(twinEdge);
+DCEL* DCELFactory::consolidateDCEL(DCEL* geometry) {
+    std::unordered_map<Vertex*, std::set<HalfEdge*, HalfEdgeAngleComparator>*> incidenceMap {};
 
-        // Only update the origin vertices' incidence sets
-        incidenceMap.at(fwdEdge->origin)->insert(fwdEdge);
-//        incidenceMap.at(twinEdge->origin)->insert(twinEdge);
+    // Set up the incidence map
+    for (Vertex* v: geometry->vertices) {
+        auto* newSet = new std::set<HalfEdge*, HalfEdgeAngleComparator>();
+        incidenceMap.insert({v, newSet});
     }
-//    dcel->halfEdges = allEdges;
-}
 
-void DCELFactory::consolidateVertices() {
-    for (Vertex* v: dcel->vertices) {
+    // Go through each outer and update the incidence map
+    for (HalfEdge* fwdEdge: geometry->halfEdges) {
+        try {
+            incidenceMap.at(fwdEdge->origin)->insert(fwdEdge);
+        } catch (std::out_of_range const &) {
+            continue;
+        }
+    }
+
+    // Now, work out the next/prev relationship for each vertex
+    for (Vertex* v: geometry->vertices) {
         std::set<HalfEdge*, HalfEdgeAngleComparator>* incidenceSet = incidenceMap.at(v);
-        printf("Consolidating vertex %s\n", v->toString().c_str());
-        printIncidenceSet(incidenceSet);
+//        printIncidenceSet(incidenceSet);
 
         // Check if there are more than 2 edges through this vertex
         if (incidenceSet->empty()) continue;
@@ -351,18 +385,101 @@ void DCELFactory::consolidateVertices() {
             continue;
         }
 
-        // Establish the prev/next edge relation
+        // Establish the prev/next outer relation
         HalfEdge* edge = *incidenceSet->rbegin();
         assert(edge != nullptr);
         v->incidentEdge = edge;
         for (HalfEdge* nextEdge: *incidenceSet) {
             nextEdge->twin->chainNext(edge);
-//            edge->twin->chainNext(nextEdge);
             edge = nextEdge;
         }
     }
+
+    geometry->consolidated = true;
+
+    return geometry;
 }
 
-void DCELFactory::consolidateFaces() {
 
+DCEL* DCELFactory::buildDualGraph() {
+    assert(dcel != nullptr);
+    assert(dcel->consolidated);
+    assert(dcel->numVertices() > 0);
+    assert(dcel->numEdges() > 0);
+    assert(dcel->numFaces() > 0);
+
+    DCEL* dualGraph = new DCEL();
+    bottomLeft = Vec2(DOUBLE_INFINITY, DOUBLE_INFINITY);
+    topRight = Vec2(-DOUBLE_INFINITY, -DOUBLE_INFINITY);
+
+    std::unordered_map<int, Vertex*> siteVertices;
+    for (Vec2 s: sites) {
+        auto* newVertex = new Vertex(s.identifier, s);
+        dualGraph->insert(newVertex);
+
+        siteVertices.insert({s.identifier, newVertex});
+
+        // Also calculate the bounding box
+        bottomLeft.x = std::min(bottomLeft.x, s.x);
+        bottomLeft.y = std::min(bottomLeft.y, s.y);
+        topRight.x = std::max(topRight.x, s.x);
+        topRight.y = std::max(topRight.y, s.y);
+    }
+
+    // Calculate bounding box
+    double width = topRight.x - bottomLeft.x;
+    double height = topRight.y - bottomLeft.y;
+    double majorAxis = std::max(width, height);
+
+    Vec2 centroid = {(topRight.x + bottomLeft.x) * 0.5, (topRight.y + bottomLeft.y) * 0.5};
+    topRight = centroid + Vec2(majorAxis, majorAxis) * 0.5;
+    bottomLeft = centroid - Vec2(majorAxis, majorAxis) * 0.5;
+
+    dualGraph->topRightBounds.x = topRight.x;
+    dualGraph->topRightBounds.y = topRight.y;
+    dualGraph->bottomLeftBounds.x = bottomLeft.x;
+    dualGraph->bottomLeftBounds.y = bottomLeft.y;
+    dualGraph->majorAxis = (majorAxis * (1 + 2 * BOUNDING_BOX_PADDING)) * 0.5;
+    dualGraph->centroid = centroid;
+
+    // Map between Voronoi vertices and triangulation faces
+    std::unordered_map<Vertex*, Face*> triangleMap;
+    for (auto &v: dcel->vertices) {
+        if (v->isBoundary) continue;
+        auto* newFace = new Face(new Vec2(v->pos.x, v->pos.y, dualGraph->numFaces() + 1));
+        dualGraph->insert(newFace);
+        triangleMap.insert({v, newFace});
+    }
+    auto* unboundedFace = new Face();
+    unboundedFace->unbounded = true;
+    dualGraph->insert(unboundedFace);
+
+    for (auto &edge: fwdEdges) {
+        try {
+            Face* leftOuterFace = edge->dest->isBoundary ? unboundedFace : triangleMap.at(edge->dest);
+            Face* rightOuterFace = edge->origin->isBoundary ? unboundedFace : triangleMap.at(edge->origin);
+
+            Face* leftFace = edge->incidentFace;
+            Face* rightFace = edge->twin->incidentFace;
+            if (leftFace == rightFace) continue;
+
+            HalfEdge* dualEdge = new HalfEdge(siteVertices.at(leftFace->label), siteVertices.at(rightFace->label));
+            HalfEdge* twinEdge = dualEdge->generateTwin();
+
+            dualEdge->incidentFace = leftOuterFace;
+            twinEdge->incidentFace = rightOuterFace;
+            leftOuterFace->offerComponent(dualEdge);
+            rightOuterFace->offerComponent(twinEdge);
+
+            dualEdge->bindTwins(twinEdge);
+            dualGraph->insert(dualEdge);
+            dualGraph->insert(twinEdge);
+        } catch (std::out_of_range const &) {
+            continue;
+        }
+    }
+
+    consolidateDCEL(dualGraph);
+
+    return dualGraph;
 }

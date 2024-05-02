@@ -49,7 +49,7 @@ void VertexPair::offerVertex(Vertex* vertex) {
 const char* HalfEdge::toString() const {
     char* result = new char[64];
     sprintf(
-        result, "e%s%d,%s%d",
+        result, "%s%d,%s%d",
         (origin->isBoundary ? "b" : ""), origin->label,
         (dest->isBoundary ? "b" : ""), dest->label
     );
