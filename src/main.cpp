@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "])\n\n# Vertex list\nverts = np.array([" << std::endl;
     for (auto v: dcel->vertices) {
-        std::cout << '\t' << v->pos.toString() << "," << (v->isBoundary ? "\t// boundary" : "") << std::endl;
+        std::cout << '\t' << v->pos.toString() << "," << (v->isBoundary ? "\t# boundary" : "") << std::endl;
     }
     std::cout << "])\n\n# Edge list\nv1 = np.array([" << std::endl;
     for (auto e: dcel->halfEdges) {

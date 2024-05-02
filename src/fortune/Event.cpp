@@ -13,7 +13,9 @@ bool EventComparator::operator()(Event* a, Event* b) const {
     if (std::abs(a->pos.y - b->pos.y) > NUMERICAL_TOLERANCE) return a->pos.y > b->pos.y;
     if (std::abs(a->pos.x - b->pos.x) > NUMERICAL_TOLERANCE) return a->pos.x < b->pos.x;
 
-    if (b->isSiteEvent) assert(!a->isSiteEvent);
+    if (b->isSiteEvent && a->isSiteEvent) {
+        printf("Duplicate vertices found\n");
+    }
 
     return a->isSiteEvent;
 }

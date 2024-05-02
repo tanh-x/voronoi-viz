@@ -205,6 +205,9 @@ void FortuneSweeper::handleSiteEvent(Event* event) {
     // The new root should replace the previous arc's node
     assert(arcAboveNode->parent == leftBpNode->parent);
 
+    // Try to reduce tree depth
+//    beachLine->splay(rightBpNode);
+
     delete arcAbove;
 
     // Check for potential circle eventQueue caused by these new arcs
@@ -268,8 +271,6 @@ LinkedNode<BeachChain*, TreeValueFacade*>* FortuneSweeper::handleCircleEvent(Eve
 
             auto* newEdge = new VertexPair();
             newEdge->offerVertex(newVoronoiVertex);
-
-            // Always point downwards
             newEdge->angle = angle > 0 ? angle - M_PI : angle;
 
             // Add it back into the value pointer
@@ -294,8 +295,33 @@ LinkedNode<BeachChain*, TreeValueFacade*>* FortuneSweeper::handleCircleEvent(Eve
             mergedBreakpoint,
             TreeValueFacade::breakpointPtr(new VertexPair({newVoronoiVertex, nullptr}))
         );
+        // Compute the angle of the line
         double angle = atan(perpendicularBisectorSlope(*leftBp->leftSite, *rightBp->rightSite));
-        mergedBpNode->value->breakpointEdge->angle = angle > 0 ? angle - M_PI : angle;
+
+        // Decide on which ray to take based on the orientation of the vertices
+        Vec2 L = *leftMerger->key->leftSite;
+//        Vec2 V = newVoronoiVertex->pos;
+        Vec2 R = *rightMerger->key->rightSite;
+
+        if (L.x > R.x) {
+            printf("Orientation check: This event is oriented counterclockwise\n");
+            mergedBpNode->value->breakpointEdge->angle = angle < 0 ? angle + M_PI : angle;
+        } else {
+            printf("Orientation check: This event is oriented clockwise\n");
+            mergedBpNode->value->breakpointEdge->angle = angle > 0 ? angle - M_PI : angle;
+        }
+//        assert(L.x < R.x);
+//        double det = computeDeterminantTest(L, V, R);
+//        if (det >= 0) {
+//            // Clockwise, take the bottom part (pointing downwards)
+//            printf("(Orientation check: This event is oriented clockwise %f)\n", det);
+//            mergedBpNode->value->breakpointEdge->angle = angle;
+//        } else {
+//            // Counterclockwise, take the top part (pointing upwards)
+//            printf("(Orientation check: This event is oriented counterclockwise %f)\n", det);
+//            mergedBpNode->value->breakpointEdge->angle = angle;
+//        }
+//        printf("Cross product check (LR x LV): %f\n", (R - L).cross(V - L));
         factory->offerPair(mergedBpNode->value->breakpointEdge);
 
         // Handle linked list operations for the new merged breakpoint node
